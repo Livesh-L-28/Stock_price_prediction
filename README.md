@@ -46,23 +46,23 @@
 
 ```mermaid
 flowchart TD
-    A[📊 Yahoo Finance API] -->|3-Year Historical Data| B(📂 Local CSV Caching)
-    B -->|Pre-process & Clean| C[⚙️ MinMaxScaler Normalization]
-    C -->|Create 60-Day Sliding Window| D[📦 X_train / Y_train Datasets]
-    D --> E[🧠 Stacked LSTM Neural Network]
-    
-    subgraph LSTM Model Architecture
-        E1[LSTM Layer 1 - 50 Units] --> E2[Dropout 20%]
-        E2 --> E3[LSTM Layer 2 - 50 Units]
-        E3 --> E4[Dropout 20%]
-        E4 --> E5[Dense Layer - 25 Units]
-        E5 --> E6[Dense Layer - 1 Output Unit]
+    A["📊 Yahoo Finance API"] -->|"3-Year Historical Data"| B("📂 Local CSV Caching")
+    B -->|"Pre-process & Clean"| C["⚙️ MinMaxScaler Normalization"]
+    C -->|"Create 60-Day Window"| D["📦 X_train / Y_train Datasets"]
+
+    subgraph Architecture ["LSTM Neural Network Layers"]
+        direction TB
+        E1["LSTM Layer 1 (50 Units)"] --> E2["Dropout (20%)"]
+        E2 --> E3["LSTM Layer 2 (50 Units)"]
+        E3 --> E4["Dropout (20%)"]
+        E4 --> E5["Dense Layer (25 Units)"]
+        E5 --> E6["Dense Layer (1 Output Unit)"]
     end
 
-    E --> LSTM Model Architecture
-    LSTM Model Architecture --> F[🔮 Auto-Regressive N-Day Forecast]
-    F --> G[📈 Matplotlib Graph Generation]
-    G --> H[🌐 Flask Web Dashboard Render]
+    D --> E1
+    E6 --> F["🔮 Auto-Regressive N-Day Forecast"]
+    F --> G["📈 Matplotlib Graph Generation"]
+    G --> H["🌐 Flask Web Dashboard Render"]
 ```
 
 ---
