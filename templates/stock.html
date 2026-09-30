@@ -283,14 +283,18 @@
     const currentTicker = "{{ profile.symbol }}";
     let currentMode = 'candlestick';
 
-    renderStockDetailChart('stockChartContainer', chartPayload, currencySymbol, currentMode);
+    window.renderCurrentStockChart = () => {
+        renderStockDetailChart('stockChartContainer', chartPayload, currencySymbol, currentMode);
+    };
+
+    window.renderCurrentStockChart();
     updateWatchlistButtonState(currentTicker);
 
     function toggleChartType(mode) {
         currentMode = mode;
         document.getElementById('btnCandle').classList.toggle('active', mode === 'candlestick');
         document.getElementById('btnArea').classList.toggle('active', mode === 'area');
-        renderStockDetailChart('stockChartContainer', chartPayload, currencySymbol, currentMode);
+        window.renderCurrentStockChart();
     }
 </script>
 {% endblock %}

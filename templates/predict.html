@@ -259,7 +259,11 @@
     const currencySymbol = "{{ currency_symbol }}";
     const currentTicker = "{{ result.ticker }}";
 
-    renderPredictionChart('predictionChartContainer', chartPayload, currencySymbol);
+    window.renderCurrentPredictionChart = () => {
+        renderPredictionChart('predictionChartContainer', chartPayload, currencySymbol);
+    };
+
+    window.renderCurrentPredictionChart();
     updateWatchlistButtonState(currentTicker);
 </script>
 {% endblock %}

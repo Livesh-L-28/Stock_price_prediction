@@ -13,7 +13,7 @@
     <!-- Custom Terminal Style -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body data-theme="light">
     <!-- Background Ambient Glow -->
     <div class="bg-ambient-glow"></div>
 
@@ -24,13 +24,13 @@
         <div class="market-status-group">
             <div class="status-indicator">
                 <span class="status-dot {{ 'active' if market_status.india.is_open else 'closed' }}"></span>
-                <span class="text-white fw-semibold">NSE:</span>
+                <span class="fw-semibold">NSE:</span>
                 <span class="text-muted small">{{ 'OPEN' if market_status.india.is_open else 'CLOSED' }}</span>
                 <span class="text-secondary mono small ms-1" style="font-size: 0.75rem;">({{ market_status.india.current_time }})</span>
             </div>
             <div class="status-indicator border-start ps-3 border-secondary border-opacity-25">
                 <span class="status-dot {{ 'active' if market_status.us.is_open else 'closed' }}"></span>
-                <span class="text-white fw-semibold">NYSE:</span>
+                <span class="fw-semibold">NYSE:</span>
                 <span class="text-muted small">{{ 'OPEN' if market_status.us.is_open else 'CLOSED' }}</span>
                 <span class="text-secondary mono small ms-1" style="font-size: 0.75rem;">({{ market_status.us.current_time }})</span>
             </div>
@@ -73,7 +73,7 @@
                 </div>
             </a>
 
-            <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
                 <i class="bi bi-list fs-2"></i>
             </button>
 
@@ -102,6 +102,12 @@
                     <input type="text" id="globalSearchInput" placeholder="Search ticker or company (e.g. AAPL, RELIANCE)..." autocomplete="off">
                     <div id="searchResultsDropdown" class="search-results-dropdown"></div>
                 </div>
+
+                <!-- Theme Toggle Button (Light / Dark) -->
+                <button class="btn-pill-action me-2" onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Light / Dark Mode">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    <span id="themeLabel">Dark</span>
+                </button>
 
                 <!-- Watchlist Trigger Button -->
                 <button class="btn-pill-action me-2" onclick="openWatchlistModal()" id="watchlistBtn">

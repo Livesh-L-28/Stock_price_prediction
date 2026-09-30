@@ -1,13 +1,60 @@
 // ==========================================================================
 // AlphaPulse AI — Production Financial Terminal JavaScript
-// Features: Instant Search, Plotly Charts, Watchlist, Real-Time Progress
+// Features: Theme Switcher (Light Default), Search, Plotly Charts, Watchlist
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initSearchAutocomplete();
     initPredictionLoading();
     syncWatchlistBadge();
 });
+
+// ==========================================================================
+// 0. Theme Management (Light by Default, with Dark Toggle)
+// ==========================================================================
+function getCurrentTheme() {
+    return localStorage.getItem('alphapulse_theme') || 'light';
+}
+
+function initTheme() {
+    const theme = getCurrentTheme();
+    document.body.setAttribute('data-theme', theme);
+    updateThemeButtonUI(theme);
+}
+
+function toggleTheme() {
+    const current = document.body.getAttribute('data-theme') || 'light';
+    const nextTheme = (current === 'light') ? 'dark' : 'light';
+    document.body.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('alphapulse_theme', nextTheme);
+    updateThemeButtonUI(nextTheme);
+
+    // Refresh charts if present
+    if (window.renderCurrentStockChart) {
+        window.renderCurrentStockChart();
+    }
+    if (window.renderCurrentPredictionChart) {
+        window.renderCurrentPredictionChart();
+    }
+}
+
+function updateThemeButtonUI(theme) {
+    const btn = document.getElementById('themeToggleBtn');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+    if (!btn || !icon || !label) return;
+
+    if (theme === 'light') {
+        icon.className = 'bi bi-moon-stars';
+        label.innerText = 'Dark';
+        btn.title = 'Switch to Dark Mode';
+    } else {
+        icon.className = 'bi bi-sun';
+        label.innerText = 'Light';
+        btn.title = 'Switch to Light Mode';
+    }
+}
 
 // ==========================================================================
 // 1. Instant Real-Time Search Autocomplete
@@ -38,10 +85,10 @@ function initSearchAutocomplete() {
                     dropdown.innerHTML = data.results.map(item => `
                         <a href="/stock/${encodeURIComponent(item.symbol)}" class="search-result-item">
                             <div>
-                                <span class="fw-bold text-white mono">${item.symbol}</span>
+                                <span class="fw-bold mono">${item.symbol}</span>
                                 <div class="small text-muted">${item.name}</div>
                             </div>
-                            <span class="badge bg-dark border border-secondary border-opacity-50 text-light small">${item.market}</span>
+                            <span class="badge bg-secondary bg-opacity-25 text-secondary small">${item.market}</span>
                         </a>
                     `).join('');
                     dropdown.style.display = 'block';
@@ -88,7 +135,6 @@ function initPredictionLoading() {
         form.addEventListener('submit', (e) => {
             overlay.style.display = 'flex';
             
-            // Extract ticker from form to poll progress
             const tickerInput = form.querySelector('input[name="ticker"]');
             const ticker = tickerInput ? tickerInput.value.trim().toUpperCase() : '';
 
@@ -184,14 +230,14 @@ async function openWatchlistModal() {
         container.innerHTML = `
             <div class="text-center py-4">
                 <i class="bi bi-star text-muted fs-1 mb-2"></i>
-                <h6 class="text-white fw-bold">Your Watchlist is Empty</h6>
+                <h6 class="fw-bold">Your Watchlist is Empty</h6>
                 <p class="text-muted small">Click "Watchlist" on any stock detail page to monitor its live performance.</p>
             </div>
         `;
     } else {
         container.innerHTML = `
             <div class="text-center py-4">
-                <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
                 <div class="text-muted small">Fetching real-time quotes for monitored assets...</div>
             </div>
         `;
@@ -207,7 +253,7 @@ async function openWatchlistModal() {
             if (data.watchlist && data.watchlist.length > 0) {
                 container.innerHTML = `
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover small mb-0">
+                        <table class="table table-hover small mb-0">
                             <thead>
                                 <tr class="text-muted border-bottom border-secondary border-opacity-25">
                                     <th>Asset</th>
@@ -221,20 +267,20 @@ async function openWatchlistModal() {
                                 ${data.watchlist.map(item => `
                                     <tr class="align-middle">
                                         <td>
-                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="text-white fw-bold mono text-decoration-none">
+                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="fw-bold mono text-decoration-none">
                                                 ${item.symbol}
                                             </a>
                                         </td>
                                         <td class="text-truncate" style="max-width: 180px;">${item.name}</td>
-                                        <td class="text-end mono fw-bold text-white">${item.currency_symbol}${item.price}</td>
+                                        <td class="text-end mono fw-bold">${item.currency_symbol}${item.price}</td>
                                         <td class="text-end mono fw-bold ${item.change >= 0 ? 'price-up' : 'price-down'}">
                                             ${item.change >= 0 ? '+' : ''}${item.change} (${item.change >= 0 ? '+' : ''}${item.change_percent}%)
                                         </td>
                                         <td class="text-end">
-                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="btn btn-sm btn-ghost py-1 px-2 me-1" title="View Chart">
+                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="btn btn-sm btn-pill-action py-1 px-2 me-1" title="View Chart">
                                                 <i class="bi bi-graph-up"></i>
                                             </a>
-                                            <button class="btn btn-sm btn-ghost text-danger py-1 px-2" onclick="removeFromWatchlist('${item.symbol}')" title="Remove">
+                                            <button class="btn btn-sm btn-pill-action text-danger py-1 px-2" onclick="removeFromWatchlist('${item.symbol}')" title="Remove">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -263,10 +309,17 @@ function removeFromWatchlist(sym) {
 }
 
 // ==========================================================================
-// 4. Plotly Financial Chart for Stock Detail Page
+// 4. Plotly Financial Chart for Stock Detail Page (Theme Aware)
 // ==========================================================================
 function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode = 'candlestick') {
     if (!window.Plotly || !chartPayload) return;
+
+    const isLight = (document.body.getAttribute('data-theme') || 'light') === 'light';
+    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)';
+    const textColor = isLight ? '#0F172A' : '#F8FAFC';
+    const subtextColor = '#64748B';
+    const btnBg = isLight ? '#F1F5F9' : '#121824';
+    const btnText = isLight ? '#0F172A' : '#FFFFFF';
 
     const dates = chartPayload.dates;
     const opens = chartPayload.opens;
@@ -286,8 +339,8 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
             mode: 'lines',
             name: 'Close Price',
             fill: 'tozeroy',
-            fillcolor: 'rgba(0, 240, 255, 0.08)',
-            line: { color: '#00F0FF', width: 2 },
+            fillcolor: isLight ? 'rgba(37, 99, 235, 0.08)' : 'rgba(0, 240, 255, 0.08)',
+            line: { color: isLight ? '#2563EB' : '#00F0FF', width: 2 },
             yaxis: 'y'
         };
     } else {
@@ -299,8 +352,8 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
             close: closes,
             type: 'candlestick',
             name: 'Price Action',
-            increasing: { line: { color: '#00E676', width: 1.5 } },
-            decreasing: { line: { color: '#FF3366', width: 1.5 } },
+            increasing: { line: { color: isLight ? '#16A34A' : '#00E676', width: 1.5 } },
+            decreasing: { line: { color: isLight ? '#DC2626' : '#FF3366', width: 1.5 } },
             yaxis: 'y'
         };
     }
@@ -311,7 +364,7 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
         type: 'scatter',
         mode: 'lines',
         name: 'SMA 20 (Fast)',
-        line: { color: '#00F0FF', width: 1.5 },
+        line: { color: isLight ? '#2563EB' : '#00F0FF', width: 1.5 },
         yaxis: 'y'
     };
 
@@ -325,7 +378,10 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
         yaxis: 'y'
     };
 
-    const volumeColors = closes.map((c, i) => (i > 0 && c >= closes[i - 1]) ? 'rgba(0, 230, 118, 0.35)' : 'rgba(255, 51, 102, 0.35)');
+    const volumeColors = closes.map((c, i) => (i > 0 && c >= closes[i - 1]) 
+        ? (isLight ? 'rgba(22, 163, 74, 0.35)' : 'rgba(0, 230, 118, 0.35)') 
+        : (isLight ? 'rgba(220, 38, 38, 0.35)' : 'rgba(255, 51, 102, 0.35)'));
+
     const volumeTrace = {
         x: dates,
         y: volumes,
@@ -338,7 +394,7 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
     const layout = {
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',
-        font: { family: 'Plus Jakarta Sans, sans-serif', color: '#94A3B8' },
+        font: { family: 'Plus Jakarta Sans, sans-serif', color: subtextColor },
         margin: { l: 60, r: 25, t: 25, b: 35 },
         hovermode: 'x unified',
         showlegend: true,
@@ -346,12 +402,12 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
             orientation: 'h',
             y: 1.12,
             x: 0,
-            font: { color: '#94A3B8', size: 11 }
+            font: { color: textColor, size: 11 }
         },
         xaxis: {
             rangeslider: { visible: false },
-            color: '#64748B',
-            gridcolor: 'rgba(255, 255, 255, 0.05)',
+            color: subtextColor,
+            gridcolor: gridColor,
             rangeselector: {
                 buttons: [
                     { count: 1, label: '1M', step: 'month', stepmode: 'backward' },
@@ -360,21 +416,21 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
                     { count: 1, label: '1Y', step: 'year', stepmode: 'backward' },
                     { step: 'all', label: 'ALL' }
                 ],
-                bgcolor: '#121824',
+                bgcolor: btnBg,
                 activecolor: '#2563EB',
-                font: { color: '#FFFFFF', size: 10 }
+                font: { color: btnText, size: 10 }
             }
         },
         yaxis: {
             title: `Price (${currencySymbol})`,
-            color: '#64748B',
-            gridcolor: 'rgba(255, 255, 255, 0.05)',
+            color: subtextColor,
+            gridcolor: gridColor,
             domain: [0.28, 1]
         },
         yaxis2: {
             title: 'Volume',
-            color: '#64748B',
-            gridcolor: 'rgba(255, 255, 255, 0.02)',
+            color: subtextColor,
+            gridcolor: 'transparent',
             domain: [0, 0.22],
             showgrid: false
         }
@@ -385,10 +441,17 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
 }
 
 // ==========================================================================
-// 5. Plotly Forecast Chart for Prediction Page
+// 5. Plotly Forecast Chart for Prediction Page (Theme Aware)
 // ==========================================================================
 function renderPredictionChart(containerId, payload, currencySymbol) {
     if (!window.Plotly || !payload) return;
+
+    const isLight = (document.body.getAttribute('data-theme') || 'light') === 'light';
+    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)';
+    const textColor = isLight ? '#0F172A' : '#F8FAFC';
+    const subtextColor = '#64748B';
+    const forecastColor = isLight ? '#2563EB' : '#00F0FF';
+    const coneFill = isLight ? 'rgba(37, 99, 235, 0.12)' : 'rgba(0, 240, 255, 0.12)';
 
     const traces = [];
 
@@ -398,7 +461,7 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
         y: payload.history_prices,
         mode: 'lines',
         name: 'Historical Close',
-        line: { color: '#94A3B8', width: 2 },
+        line: { color: isLight ? '#64748B' : '#94A3B8', width: 2 },
         hoverinfo: 'x+y'
     });
 
@@ -420,7 +483,7 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
             x: payload.future_dates,
             y: payload.upper_band,
             mode: 'lines',
-            line: { color: 'rgba(0, 240, 255, 0)' },
+            line: { color: 'rgba(0, 0, 0, 0)' },
             showlegend: false,
             hoverinfo: 'none'
         });
@@ -430,8 +493,8 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
             y: payload.lower_band,
             mode: 'lines',
             fill: 'tonexty',
-            fillcolor: 'rgba(0, 240, 255, 0.12)',
-            line: { color: 'rgba(0, 240, 255, 0)' },
+            fillcolor: coneFill,
+            line: { color: 'rgba(0, 0, 0, 0)' },
             name: '95% Confidence Cone',
             hoverinfo: 'none'
         });
@@ -446,15 +509,15 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
         y: forecastPrices,
         mode: 'lines+markers',
         name: 'LSTM Neural Forecast',
-        line: { color: '#00F0FF', width: 3 },
-        marker: { size: 5, color: '#00F0FF' },
+        line: { color: forecastColor, width: 3 },
+        marker: { size: 5, color: forecastColor },
         hoverinfo: 'x+y'
     });
 
     const layout = {
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',
-        font: { family: 'Plus Jakarta Sans, sans-serif', color: '#94A3B8' },
+        font: { family: 'Plus Jakarta Sans, sans-serif', color: subtextColor },
         margin: { l: 60, r: 25, t: 30, b: 35 },
         hovermode: 'x unified',
         showlegend: true,
@@ -462,17 +525,17 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
             orientation: 'h',
             y: 1.12,
             x: 0,
-            font: { color: '#94A3B8', size: 11 }
+            font: { color: textColor, size: 11 }
         },
         xaxis: {
-            color: '#64748B',
-            gridcolor: 'rgba(255, 255, 255, 0.05)',
+            color: subtextColor,
+            gridcolor: gridColor,
             title: 'Trading Date'
         },
         yaxis: {
             title: `Stock Price (${currencySymbol})`,
-            color: '#64748B',
-            gridcolor: 'rgba(255, 255, 255, 0.05)'
+            color: subtextColor,
+            gridcolor: gridColor
         }
     };
 

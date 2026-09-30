@@ -1,12 +1,62 @@
 /* ==========================================================================
    AlphaPulse AI — Production Financial Intelligence Terminal
-   Design System & Styling
+   Design System: Light Mode (Default) & Dark Mode Dual Theme
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 
-:root {
-    /* Color Palette - Obsidian Space Financial */
+/* ==========================================================================
+   1. Theme Variables: LIGHT (Default) & DARK
+   ========================================================================== */
+
+:root,
+body[data-theme="light"],
+[data-theme="light"] {
+    /* Canvas & Surfaces (Clean Light Slate) */
+    --bg-base: #F8FAFC;
+    --bg-surface-1: #FFFFFF;
+    --bg-surface-2: #F1F5F9;
+    --bg-surface-3: #E2E8F0;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFC;
+    
+    /* Borders & Subtle Lines */
+    --border-subtle: #E2E8F0;
+    --border-medium: #CBD5E1;
+    --border-accent: rgba(37, 99, 235, 0.35);
+    --border-glow: 0 4px 20px rgba(37, 99, 235, 0.08);
+    
+    /* Typography */
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --text-dim: #94A3B8;
+
+    /* Financial Accents */
+    --bullish: #16A34A;
+    --bullish-bg: rgba(22, 163, 74, 0.1);
+    --bullish-border: rgba(22, 163, 74, 0.25);
+    --bullish-glow: rgba(22, 163, 74, 0.15);
+    
+    --bearish: #DC2626;
+    --bearish-bg: rgba(220, 38, 38, 0.1);
+    --bearish-border: rgba(220, 38, 38, 0.25);
+    --bearish-glow: rgba(220, 38, 38, 0.15);
+    
+    /* Brand Gradients */
+    --primary-cyan: #2563EB;
+    --primary-blue: #1D4ED8;
+    --primary-violet: #4F46E5;
+    --accent-gradient: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+    --card-gradient: #FFFFFF;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+    --card-shadow-hover: 0 10px 30px rgba(37, 99, 235, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
+    --chart-grid: rgba(0, 0, 0, 0.06);
+    --chart-text: #64748B;
+}
+
+body[data-theme="dark"],
+[data-theme="dark"] {
     --bg-base: #06080D;
     --bg-surface-1: #0B0E17;
     --bg-surface-2: #101522;
@@ -14,23 +64,16 @@
     --bg-card: rgba(16, 21, 34, 0.75);
     --bg-card-hover: rgba(22, 29, 46, 0.95);
     
-    /* Borders & Dividers */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-medium: rgba(255, 255, 255, 0.12);
     --border-accent: rgba(0, 240, 255, 0.35);
     --border-glow: 0 0 20px rgba(0, 240, 255, 0.15);
-    
-    /* Typography */
-    --font-heading: 'Outfit', sans-serif;
-    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
     
     --text-primary: #FFFFFF;
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
     --text-dim: #475569;
 
-    /* Financial Indicators */
     --bullish: #00E676;
     --bullish-bg: rgba(0, 230, 118, 0.12);
     --bullish-border: rgba(0, 230, 118, 0.3);
@@ -41,13 +84,21 @@
     --bearish-border: rgba(255, 51, 102, 0.3);
     --bearish-glow: rgba(255, 51, 102, 0.25);
     
-    /* Futuristic Gradients */
     --primary-cyan: #00F0FF;
     --primary-blue: #3A86FF;
     --primary-violet: #7928CA;
     --accent-gradient: linear-gradient(135deg, #00F0FF 0%, #3A86FF 50%, #7928CA 100%);
-    --bullish-gradient: linear-gradient(135deg, #00E676 0%, #00B0FF 100%);
     --card-gradient: linear-gradient(180deg, rgba(22, 29, 46, 0.6) 0%, rgba(11, 14, 23, 0.8) 100%);
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --card-shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.6);
+    --chart-grid: rgba(255, 255, 255, 0.05);
+    --chart-text: #64748B;
+}
+
+:root {
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
 }
 
 * {
@@ -67,20 +118,7 @@ body {
     flex-direction: column;
     overflow-x: hidden;
     letter-spacing: -0.01em;
-}
-
-/* Background Ambient Glow Effects */
-.bg-ambient-glow {
-    position: fixed;
-    top: -150px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 900px;
-    height: 450px;
-    background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, rgba(58, 134, 255, 0.04) 40%, transparent 70%);
-    filter: blur(80px);
-    pointer-events: none;
-    z-index: 0;
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .mono {
@@ -90,14 +128,100 @@ body {
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     letter-spacing: -0.02em;
+    color: var(--text-primary);
 }
 
 /* ==========================================================================
-   Ticker Ribbon & Market Status Tape
+   2. Light Mode Overrides for Bootstrap Utility Classes
+   ========================================================================== */
+
+body[data-theme="light"] .text-white {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] .text-light {
+    color: var(--text-secondary) !important;
+}
+
+body[data-theme="light"] .bg-dark {
+    background-color: var(--bg-surface-2) !important;
+    border-color: var(--border-subtle) !important;
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] .border-secondary {
+    border-color: var(--border-subtle) !important;
+}
+
+body[data-theme="light"] .table-dark {
+    --bs-table-bg: #FFFFFF;
+    --bs-table-striped-bg: #F8FAFC;
+    --bs-table-hover-bg: #F1F5F9;
+    --bs-table-color: var(--text-primary);
+    --bs-table-border-color: var(--border-subtle);
+    color: var(--text-primary) !important;
+    background-color: #FFFFFF !important;
+}
+
+body[data-theme="light"] .table-dark td,
+body[data-theme="light"] .table-dark th {
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+}
+
+body[data-theme="light"] .form-control.bg-dark {
+    background-color: #FFFFFF !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-medium) !important;
+}
+
+body[data-theme="light"] .form-control.bg-dark:focus {
+    background-color: #FFFFFF !important;
+    color: var(--text-primary) !important;
+    border-color: var(--primary-cyan) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+body[data-theme="light"] .input-group-text.bg-dark {
+    background-color: var(--bg-surface-2) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-medium) !important;
+}
+
+body[data-theme="light"] .badge.bg-dark {
+    background-color: var(--bg-surface-2) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-medium) !important;
+}
+
+body[data-theme="light"] .btn-close-white {
+    filter: none;
+}
+
+/* Background Ambient Glow */
+.bg-ambient-glow {
+    position: fixed;
+    top: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, rgba(79, 70, 229, 0.03) 40%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+body[data-theme="dark"] .bg-ambient-glow {
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, rgba(58, 134, 255, 0.04) 40%, transparent 70%);
+}
+
+/* ==========================================================================
+   3. Ticker Ribbon & Market Status Tape
    ========================================================================== */
 
 .ticker-ribbon-container {
-    background: #080A10;
+    background: var(--bg-surface-1);
     border-bottom: 1px solid var(--border-subtle);
     padding: 0.45rem 1.5rem;
     position: relative;
@@ -153,11 +277,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tape-item .val {
-    color: #fff;
+    color: var(--text-primary);
     font-family: var(--font-mono);
+    font-weight: 600;
 }
 
-/* Status Dot with Glow */
+/* Status Indicator */
 .status-indicator {
     display: inline-flex;
     align-items: center;
@@ -176,37 +301,24 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 0 10px var(--bullish);
 }
 
-.status-dot.active::after {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    border: 1px solid var(--bullish);
-    animation: ripple 2s infinite cubic-bezier(0, 0.2, 0.8, 1);
-}
-
 .status-dot.closed {
     background: var(--text-muted);
 }
 
-@keyframes ripple {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(2.5); opacity: 0; }
-}
-
 /* ==========================================================================
-   Navigation Bar
+   4. Navigation Bar
    ========================================================================== */
 
 .navbar-terminal {
-    background: rgba(8, 10, 16, 0.85);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: var(--bg-surface-1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-subtle);
     padding: 0.85rem 1.75rem;
     position: sticky;
     top: 0;
     z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .brand-wrapper {
@@ -214,7 +326,7 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     gap: 0.75rem;
     text-decoration: none;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .brand-icon {
@@ -227,7 +339,7 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: center;
     color: #fff;
     font-size: 1.15rem;
-    box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
 .brand-title {
@@ -238,6 +350,7 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     gap: 0.35rem;
+    color: var(--text-primary);
 }
 
 .brand-tag {
@@ -246,9 +359,9 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     padding: 0.15rem 0.45rem;
     border-radius: 4px;
-    background: rgba(0, 240, 255, 0.12);
+    background: rgba(37, 99, 235, 0.1);
     color: var(--primary-cyan);
-    border: 1px solid rgba(0, 240, 255, 0.25);
+    border: 1px solid rgba(37, 99, 235, 0.25);
     text-transform: uppercase;
 }
 
@@ -266,26 +379,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-link-custom:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    background: var(--bg-surface-2);
 }
 
 .nav-link-custom.active {
-    color: #fff;
-    background: rgba(0, 240, 255, 0.08);
-    border: 1px solid rgba(0, 240, 255, 0.2);
+    color: var(--primary-cyan);
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 /* Header Search */
 .terminal-search {
     position: relative;
-    width: 290px;
+    width: 270px;
 }
 
 .terminal-search input {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-surface-2);
     border: 1px solid var(--border-subtle);
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.88rem;
     border-radius: 10px;
     padding: 0.45rem 0.9rem 0.45rem 2.3rem;
@@ -294,9 +407,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .terminal-search input:focus {
-    background: rgba(255, 255, 255, 0.08);
+    background: #FFFFFF;
     border-color: var(--primary-cyan);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     outline: none;
 }
 
@@ -309,17 +422,45 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.9rem;
 }
 
+.search-results-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-surface-1);
+    border: 1px solid var(--border-medium);
+    border-radius: 10px;
+    overflow: hidden;
+    z-index: 1050;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    display: none;
+}
+
+.search-result-item {
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+}
+
+.search-result-item:hover {
+    background: var(--bg-surface-2);
+}
+
 /* ==========================================================================
-   Modern Cards & Glassmorphism
+   5. Modern Cards & Containers
    ========================================================================== */
 
 .terminal-card {
-    background: var(--card-gradient);
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: 16px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--card-shadow);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
                 border-color 0.25s ease, 
                 box-shadow 0.25s ease;
@@ -327,28 +468,46 @@ h1, h2, h3, h4, h5, h6 {
     overflow: hidden;
 }
 
-.terminal-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-}
-
 .terminal-card:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+    border-color: var(--border-accent);
+    box-shadow: var(--card-shadow-hover);
 }
 
 .card-highlight {
-    border-color: rgba(0, 240, 255, 0.25);
-    box-shadow: 0 10px 35px rgba(0, 240, 255, 0.08);
+    border-color: rgba(37, 99, 235, 0.25);
+    box-shadow: 0 4px 25px rgba(37, 99, 235, 0.08);
+}
+
+.metric-card {
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.15rem;
+    transition: border-color 0.2s;
+}
+
+.metric-card:hover {
+    border-color: var(--border-medium);
+}
+
+.metric-label {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.3rem;
+}
+
+.metric-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1.35rem;
 }
 
 /* ==========================================================================
-   Buttons & Interactive Elements
+   6. Buttons & Interactive Elements
    ========================================================================== */
 
 .btn-primary-gradient {
@@ -361,7 +520,7 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.75rem 1.6rem;
     border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0, 240, 255, 0.35);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
@@ -371,12 +530,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary-gradient:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 240, 255, 0.5);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
     color: #fff;
 }
 
 .btn-secondary-glass {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-surface-1);
     border: 1px solid var(--border-medium);
     color: var(--text-secondary);
     font-weight: 600;
@@ -389,16 +548,17 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .btn-secondary-glass:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: #fff;
-    color: #fff;
+    background: var(--bg-surface-2);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
 }
 
 .btn-pill-action {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-surface-2);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
     font-size: 0.8rem;
@@ -414,13 +574,66 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-pill-action:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    background: var(--bg-surface-3);
     border-color: var(--border-medium);
 }
 
+.btn-pill-action.active {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: var(--primary-cyan);
+    color: var(--primary-cyan);
+}
+
+/* Horizon Selection Pills */
+.horizon-pills {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.horizon-pill-btn {
+    flex: 1;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.horizon-pill-btn.active, .horizon-pill-btn:hover {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: var(--primary-cyan);
+    color: var(--primary-cyan);
+}
+
+/* Quick Suggestion Chips */
+.quick-chip {
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-chip:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: var(--primary-cyan);
+    color: var(--primary-cyan);
+}
+
 /* ==========================================================================
-   Stock & Metric Badges
+   7. Financial Indicators & Badges
    ========================================================================== */
 
 .price-up {
@@ -453,85 +666,10 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-mono);
 }
 
-.metric-card {
-    background: rgba(14, 18, 28, 0.6);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    padding: 1.15rem;
-    transition: border-color 0.2s;
-}
-
-.metric-card:hover {
-    border-color: var(--border-medium);
-}
-
-.metric-label {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.3rem;
-}
-
-.metric-value {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    color: #fff;
-    font-size: 1.35rem;
-}
-
-/* Quick Horizon Pill Buttons */
-.horizon-pills {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.horizon-pill-btn {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
-    border-radius: 8px;
-    padding: 0.4rem 0.5rem;
-    font-size: 0.8rem;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.horizon-pill-btn.active, .horizon-pill-btn:hover {
-    background: rgba(0, 240, 255, 0.15);
-    border-color: var(--primary-cyan);
-    color: #fff;
-}
-
-/* Quick Chip Tag */
-.quick-chip {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
-    padding: 0.25rem 0.65rem;
-    border-radius: 6px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.quick-chip:hover {
-    background: rgba(0, 240, 255, 0.1);
-    border-color: var(--primary-cyan);
-    color: var(--primary-cyan);
-}
-
-/* 52-Week Range Bar */
+/* 52-Week Range Slider Track */
 .range-track {
     height: 6px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-surface-3);
     border-radius: 3px;
     position: relative;
     margin: 0.75rem 0;
@@ -552,23 +690,27 @@ h1, h2, h3, h4, h5, h6 {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 8px rgba(0, 240, 255, 0.8);
+    box-shadow: 0 0 6px rgba(37, 99, 235, 0.5);
 }
 
 /* ==========================================================================
-   Loading Overlay with Neural Pulse
+   8. Loading Overlay with Neural Rings
    ========================================================================== */
 
 .terminal-loader-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(6, 8, 13, 0.92);
+    background: rgba(248, 250, 252, 0.94);
     backdrop-filter: blur(16px);
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+}
+
+body[data-theme="dark"] .terminal-loader-overlay {
+    background: rgba(6, 8, 13, 0.92);
 }
 
 .neural-spinner {
@@ -627,12 +769,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==========================================================================
-   Footer
+   9. Footer
    ========================================================================== */
 
 .terminal-footer {
     margin-top: auto;
-    background: #080A10;
+    background: var(--bg-surface-1);
     border-top: 1px solid var(--border-subtle);
     padding: 2rem 0;
     font-size: 0.85rem;
