@@ -14,7 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // 0. Theme Management (Light by Default, with Dark Toggle)
 // ==========================================================================
 function getCurrentTheme() {
-    return localStorage.getItem('alphapulse_theme') || 'light';
+    // Default to 'light' for modern fintech light aesthetic
+    const stored = localStorage.getItem('alphapulse_theme_v2');
+    if (!stored) {
+        localStorage.setItem('alphapulse_theme_v2', 'light');
+        localStorage.removeItem('alphapulse_theme');
+        return 'light';
+    }
+    return stored;
 }
 
 function initTheme() {
@@ -27,7 +34,7 @@ function toggleTheme() {
     const current = document.body.getAttribute('data-theme') || 'light';
     const nextTheme = (current === 'light') ? 'dark' : 'light';
     document.body.setAttribute('data-theme', nextTheme);
-    localStorage.setItem('alphapulse_theme', nextTheme);
+    localStorage.setItem('alphapulse_theme_v2', nextTheme);
     updateThemeButtonUI(nextTheme);
 
     // Refresh charts if present

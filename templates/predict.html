@@ -12,7 +12,7 @@
             <span class="text-muted small">/</span>
             <a href="/stock/{{ result.ticker }}" class="text-secondary small text-decoration-none mono">{{ result.ticker }}</a>
             <span class="text-muted small">/</span>
-            <span class="text-info small fw-bold">Deep Learning Forecast</span>
+            <span class="text-primary small fw-bold">Deep Learning Forecast</span>
         </div>
         
         <div class="d-flex flex-wrap gap-2">
@@ -25,8 +25,8 @@
             <button class="btn-pill-action" onclick="window.print()">
                 <i class="bi bi-printer"></i> <span>Print Report</span>
             </button>
-            <span class="badge bg-dark border border-secondary border-opacity-50 text-light mono px-3 py-1">
-                <i class="bi bi-cpu text-info me-1"></i> {{ result.model_status }}
+            <span class="badge terminal-badge mono px-3 py-1">
+                <i class="bi bi-cpu text-primary me-1"></i> {{ result.model_status }}
             </span>
         </div>
     </div>
@@ -36,7 +36,7 @@
         <div class="row align-items-center g-4">
             <div class="col-lg-7">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="badge bg-dark border border-secondary border-opacity-50 text-white mono px-2 py-1 fs-6">
+                    <span class="badge terminal-badge mono px-2 py-1 fs-6">
                         {{ result.ticker }}
                     </span>
                     <span class="text-secondary small">{{ company_name }}</span>
@@ -49,7 +49,7 @@
                 <div class="d-flex flex-wrap align-items-baseline gap-3 mb-2">
                     <div>
                         <span class="text-muted small d-block">Target Projected Price ({{ result.forecast_days }}d):</span>
-                        <span class="display-6 fw-bold mono" style="color: var(--primary-cyan);">
+                        <span class="display-6 fw-bold mono text-primary">
                             {{ currency_symbol }}{{ result.final_predicted_price }}
                         </span>
                     </div>
@@ -71,14 +71,14 @@
                     <div class="col-6">
                         <div class="metric-card p-3">
                             <div class="metric-label">Current Spot</div>
-                            <div class="text-white mono fw-bold fs-5">{{ currency_symbol }}{{ result.current_price }}</div>
+                            <div class="mono fw-bold fs-5">{{ currency_symbol }}{{ result.current_price }}</div>
                             <span class="text-muted small" style="font-size: 0.72rem;">Last recorded close</span>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="metric-card p-3">
                             <div class="metric-label">Horizon</div>
-                            <div class="text-info mono fw-bold fs-5">{{ result.forecast_days }} Business Days</div>
+                            <div class="text-primary mono fw-bold fs-5">{{ result.forecast_days }} Business Days</div>
                             <span class="text-muted small" style="font-size: 0.72rem;">Trading days</span>
                         </div>
                     </div>
@@ -105,8 +105,8 @@
     <div class="terminal-card p-4 mb-4">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
             <div>
-                <h5 class="fw-bold text-white mb-0">
-                    <i class="bi bi-graph-up-arrow text-info me-2"></i> Historical Trajectory & Neural Forecast Cone
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i> Historical Trajectory & Neural Forecast Cone
                 </h5>
                 <span class="text-secondary small">
                     Actual prices, held-out model test validation, multi-day projection, and 95% statistical confidence cone
@@ -114,9 +114,9 @@
             </div>
             
             <div class="d-flex flex-wrap gap-2">
-                <span class="btn-pill-action text-white">● Historical</span>
+                <span class="btn-pill-action fw-semibold">● Historical</span>
                 <span class="btn-pill-action text-warning">--- Test Fit</span>
-                <span class="btn-pill-action text-info">━ AI Forecast</span>
+                <span class="btn-pill-action text-primary">━ AI Forecast</span>
                 <span class="btn-pill-action text-muted">░ 95% Cone</span>
             </div>
         </div>
@@ -131,9 +131,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-check2-circle text-success fs-5"></i>
-                        <h5 class="fw-bold text-white mb-0">Out-of-Sample Backtesting Metrics</h5>
+                        <h5 class="fw-bold mb-0">Out-of-Sample Backtesting Metrics</h5>
                     </div>
-                    <span class="badge bg-secondary bg-opacity-25 text-light small">Held-out Split</span>
+                    <span class="badge badge-sector small">Held-out Split</span>
                 </div>
                 <p class="text-secondary small mb-3">
                     Calculated by benchmarking model predictions against real out-of-sample trading days to verify generalization.
@@ -141,28 +141,28 @@
 
                 <div class="row g-3">
                     <div class="col-6 col-sm-3">
-                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                        <div class="p-3 terminal-metric-card text-center">
                             <span class="text-secondary small d-block mb-1">RMSE</span>
-                            <h4 class="text-white mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.rmse }}</h4>
+                            <h4 class="mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.rmse }}</h4>
                             <span class="text-muted" style="font-size: 0.72rem;">Std dev error</span>
                         </div>
                     </div>
                     <div class="col-6 col-sm-3">
-                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                        <div class="p-3 terminal-metric-card text-center">
                             <span class="text-secondary small d-block mb-1">MAE</span>
-                            <h4 class="text-white mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.mae }}</h4>
+                            <h4 class="mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.mae }}</h4>
                             <span class="text-muted" style="font-size: 0.72rem;">Mean abs error</span>
                         </div>
                     </div>
                     <div class="col-6 col-sm-3">
-                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                        <div class="p-3 terminal-metric-card text-center">
                             <span class="text-secondary small d-block mb-1">MAPE</span>
-                            <h4 class="mono fw-bold mb-0" style="color: var(--primary-cyan);">{{ result.metrics.mape }}%</h4>
+                            <h4 class="mono fw-bold mb-0 text-primary">{{ result.metrics.mape }}%</h4>
                             <span class="text-muted" style="font-size: 0.72rem;">Mean % error</span>
                         </div>
                     </div>
                     <div class="col-6 col-sm-3">
-                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                        <div class="p-3 terminal-metric-card text-center">
                             <span class="text-secondary small d-block mb-1">Directional Acc</span>
                             <h4 class="text-warning mono fw-bold mb-0">{{ result.metrics.directional_accuracy }}%</h4>
                             <span class="text-muted" style="font-size: 0.72rem;">Up/Down match</span>
@@ -176,8 +176,8 @@
         <div class="col-lg-5">
             <div class="terminal-card p-4 h-100">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="bi bi-sliders text-info fs-5"></i>
-                    <h5 class="fw-bold text-white mb-0">Adjust Horizon or Retrain</h5>
+                    <i class="bi bi-sliders text-primary fs-5"></i>
+                    <h5 class="fw-bold mb-0">Adjust Horizon or Retrain</h5>
                 </div>
                 <p class="text-secondary small mb-3">
                     Re-run inference across a custom trading horizon or re-fit fresh network weights.
@@ -189,7 +189,7 @@
                     <div class="mb-3">
                         <label class="form-label text-secondary small fw-semibold d-flex justify-content-between">
                             <span>Forecast Horizon:</span>
-                            <span class="mono fw-bold" style="color: var(--primary-cyan);" id="recalHorizonVal">{{ result.forecast_days }} Business Days</span>
+                            <span class="mono fw-bold text-primary" id="recalHorizonVal">{{ result.forecast_days }} Business Days</span>
                         </label>
                         <input type="range" name="days" class="form-range" min="7" max="90" value="{{ result.forecast_days }}" oninput="document.getElementById('recalHorizonVal').innerText = this.value + ' Business Days'">
                         <div class="d-flex justify-content-between text-muted small mono">
@@ -226,7 +226,7 @@
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-newspaper text-warning fs-5"></i>
-                <h5 class="fw-bold text-white mb-0">Financial Sentiment Snapshot for {{ result.ticker }}</h5>
+                <h5 class="fw-bold mb-0">Financial Sentiment Snapshot for {{ result.ticker }}</h5>
             </div>
             
             <span class="{{ news.sentiment_summary.badge_class }} px-2 py-1">
@@ -237,12 +237,12 @@
         <div class="row g-3">
             {% for item in news.articles[:2] %}
             <div class="col-md-6">
-                <div class="p-3 rounded-3" style="background: rgba(14, 18, 28, 0.6); border: 1px solid var(--border-subtle);">
+                <div class="p-3 rounded-3 terminal-news-card">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="small text-muted">{{ item.publisher }} • {{ item.time_ago }}</span>
                         <span class="{{ item.sentiment.badge_class }}" style="font-size: 0.7rem;">{{ item.sentiment.label }}</span>
                     </div>
-                    <h6 class="text-white fw-semibold mb-1" style="font-size: 0.9rem;">{{ item.title }}</h6>
+                    <h6 class="fw-semibold mb-1" style="font-size: 0.9rem;">{{ item.title }}</h6>
                 </div>
             </div>
             {% endfor %}

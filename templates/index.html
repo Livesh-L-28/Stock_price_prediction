@@ -9,13 +9,13 @@
     <div class="row align-items-center g-5 mb-5 pb-3">
         <!-- Hero Left Column -->
         <div class="col-lg-7">
-            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3" style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.2);">
-                <i class="bi bi-stars" style="color: var(--primary-cyan);"></i>
-                <span class="small fw-semibold" style="color: var(--primary-cyan);">Deep Learning Time-Series Forecaster</span>
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3 hero-chip">
+                <i class="bi bi-stars text-primary"></i>
+                <span class="small fw-semibold text-primary">Deep Learning Time-Series Forecaster</span>
             </div>
             
-            <h1 class="display-5 fw-bold text-white mb-3" style="letter-spacing: -1px; line-height: 1.15;">
-                Quantitative Stock Intelligence Powered by <span style="background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Stacked LSTM</span>
+            <h1 class="display-5 fw-bold mb-3 hero-heading">
+                Quantitative Stock Intelligence Powered by <span class="gradient-text">Stacked LSTM</span>
             </h1>
             
             <p class="text-secondary lead mb-4" style="font-size: 1.08rem; max-width: 580px;">
@@ -27,13 +27,13 @@
                 <div class="col-4">
                     <div class="metric-card p-2 text-center">
                         <div class="metric-label" style="font-size: 0.7rem;">Time Window</div>
-                        <div class="text-white fw-bold mono" style="font-size: 1.05rem;">60 Days</div>
+                        <div class="fw-bold mono metric-val" style="font-size: 1.05rem;">60 Days</div>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="metric-card p-2 text-center">
                         <div class="metric-label" style="font-size: 0.7rem;">Neural Engine</div>
-                        <div class="text-info fw-bold mono" style="font-size: 1.05rem;">2x LSTM</div>
+                        <div class="text-primary fw-bold mono" style="font-size: 1.05rem;">2x LSTM</div>
                     </div>
                 </div>
                 <div class="col-4">
@@ -60,15 +60,15 @@
             <div class="terminal-card card-highlight p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="p-2 rounded-3 bg-dark border border-secondary border-opacity-25 text-warning">
+                        <div class="p-2 rounded-3 terminal-icon-box text-warning">
                             <i class="bi bi-lightning-charge-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="fw-bold text-white mb-0">Quick AI Forecast</h5>
+                            <h5 class="fw-bold mb-0">Quick AI Forecast</h5>
                             <span class="text-muted small">Deep Learning Prediction</span>
                         </div>
                     </div>
-                    <span class="badge bg-dark border border-info border-opacity-25 text-info mono small px-2 py-1">LSTM-v2</span>
+                    <span class="badge badge-neural mono small px-2 py-1">LSTM-v2</span>
                 </div>
                 
                 <form action="/predict" method="POST" class="predict-form" id="heroPredictForm">
@@ -79,10 +79,10 @@
                             <span class="text-muted small">NSE or US</span>
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-dark border-secondary border-opacity-25 text-muted mono">
+                            <span class="input-group-text terminal-input-addon mono">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input list="stockDatalist" id="heroTickerInput" name="ticker" class="form-control bg-dark text-white border-secondary border-opacity-25 mono fw-semibold" placeholder="e.g. RELIANCE, AAPL, NVDA" required>
+                            <input list="stockDatalist" id="heroTickerInput" name="ticker" class="form-control terminal-input mono fw-semibold" placeholder="e.g. RELIANCE, AAPL, NVDA" required>
                             <datalist id="stockDatalist">
                                 {% for s in featured_indian %}
                                 <option value="{{ s.symbol }}">{{ s.name }} (NSE India)</option>
@@ -108,7 +108,7 @@
                     <div class="mb-4">
                         <label class="form-label text-secondary small fw-semibold d-flex justify-content-between">
                             <span>Forecast Horizon</span>
-                            <span class="mono fw-bold" style="color: var(--primary-cyan);" id="horizonDisplay">30 Business Days</span>
+                            <span class="mono fw-bold text-primary" id="horizonDisplay">30 Business Days</span>
                         </label>
                         
                         <!-- Hidden input for form submission -->
@@ -145,7 +145,7 @@
     <div class="mb-5 pb-2">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
             <div>
-                <h4 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
                     <span>🇮🇳 Key Indian Market Bluechips (NSE)</span>
                 </h4>
                 <p class="text-secondary small mb-0">High-volume benchmark leaders pre-indexed for instant forecasting</p>
@@ -162,24 +162,24 @@
                 <div class="terminal-card p-3 h-100 d-flex flex-column justify-content-between">
                     <div>
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge bg-dark border border-secondary border-opacity-50 text-white mono px-2 py-1">
+                            <span class="badge terminal-badge mono px-2 py-1">
                                 {{ stock.symbol }}
                             </span>
-                            <span class="badge bg-secondary bg-opacity-25 text-light small" style="font-size: 0.72rem;">
+                            <span class="badge badge-sector small">
                                 {{ stock.sector }}
                             </span>
                         </div>
-                        <h6 class="text-white fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
+                        <h6 class="fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
                     </div>
                     
-                    <div class="d-flex gap-2 mt-3 pt-2 border-top border-secondary border-opacity-25">
+                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
                         <a href="/stock/{{ stock.symbol }}" class="btn-pill-action flex-grow-1 justify-content-center">
                             <i class="bi bi-graph-up"></i> Analysis
                         </a>
                         <form action="/predict" method="POST" class="predict-form flex-grow-1">
                             <input type="hidden" name="ticker" value="{{ stock.symbol }}">
                             <input type="hidden" name="days" value="30">
-                            <button type="submit" class="btn-pill-action w-100 justify-content-center text-info border-info border-opacity-25">
+                            <button type="submit" class="btn-pill-action w-100 justify-content-center btn-pill-action-primary">
                                 <i class="bi bi-cpu"></i> Predict
                             </button>
                         </form>
@@ -194,7 +194,7 @@
     <div class="mb-5 pb-2">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
             <div>
-                <h4 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
                     <span>🇺🇸 US Mega-Cap Leaders (NYSE / NASDAQ)</span>
                 </h4>
                 <p class="text-secondary small mb-0">Global technology and semiconductor leaders</p>
@@ -211,24 +211,24 @@
                 <div class="terminal-card p-3 h-100 d-flex flex-column justify-content-between">
                     <div>
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge bg-dark border border-secondary border-opacity-50 text-white mono px-2 py-1">
+                            <span class="badge terminal-badge mono px-2 py-1">
                                 {{ stock.symbol }}
                             </span>
-                            <span class="badge bg-secondary bg-opacity-25 text-light small" style="font-size: 0.72rem;">
+                            <span class="badge badge-sector small">
                                 {{ stock.sector }}
                             </span>
                         </div>
-                        <h6 class="text-white fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
+                        <h6 class="fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
                     </div>
                     
-                    <div class="d-flex gap-2 mt-3 pt-2 border-top border-secondary border-opacity-25">
+                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
                         <a href="/stock/{{ stock.symbol }}" class="btn-pill-action flex-grow-1 justify-content-center">
                             <i class="bi bi-graph-up"></i> Analysis
                         </a>
                         <form action="/predict" method="POST" class="predict-form flex-grow-1">
                             <input type="hidden" name="ticker" value="{{ stock.symbol }}">
                             <input type="hidden" name="days" value="30">
-                            <button type="submit" class="btn-pill-action w-100 justify-content-center text-info border-info border-opacity-25">
+                            <button type="submit" class="btn-pill-action w-100 justify-content-center btn-pill-action-primary">
                                 <i class="bi bi-cpu"></i> Predict
                             </button>
                         </form>
@@ -243,29 +243,29 @@
     <div class="terminal-card p-4">
         <div class="d-flex align-items-center gap-2 mb-3">
             <i class="bi bi-shield-check text-success fs-5"></i>
-            <h5 class="fw-bold text-white mb-0">Production Forecasting Pipeline Standards</h5>
+            <h5 class="fw-bold mb-0">Production Forecasting Pipeline Standards</h5>
         </div>
         <div class="row g-4 text-secondary small">
             <div class="col-md-3 col-sm-6">
-                <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 h-100">
-                    <div class="text-info fw-bold mb-1"><i class="bi bi-layers-fill me-1"></i> Multi-Layer LSTM</div>
+                <div class="p-3 terminal-metric-card h-100">
+                    <div class="text-primary fw-bold mb-1"><i class="bi bi-layers-fill me-1"></i> Multi-Layer LSTM</div>
                     <p class="mb-0 text-muted">2-tier stacked LSTM with 50 units each, dropout regularization, and Dense activation layers.</p>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
-                <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 h-100">
+                <div class="p-3 terminal-metric-card h-100">
                     <div class="text-success fw-bold mb-1"><i class="bi bi-check2-circle me-1"></i> Out-of-Sample Test</div>
                     <p class="mb-0 text-muted">Held-out test split calculates RMSE, MAE, MAPE, and directional accuracy against live history.</p>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
-                <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 h-100">
+                <div class="p-3 terminal-metric-card h-100">
                     <div class="text-warning fw-bold mb-1"><i class="bi bi-graph-up me-1"></i> 95% Confidence Cone</div>
                     <p class="mb-0 text-muted">Empirical residual standard deviations project expanding uncertainty bounds over the forecast.</p>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6">
-                <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 h-100">
+                <div class="p-3 terminal-metric-card h-100">
                     <div class="text-primary fw-bold mb-1"><i class="bi bi-hdd-network-fill me-1"></i> Checkpointed Weights</div>
                     <p class="mb-0 text-muted">Trained weights are cached as native Keras binaries with session memory purging on every request.</p>
                 </div>
