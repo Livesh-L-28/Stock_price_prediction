@@ -1,47 +1,221 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prediction Result</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        body {
-            background: #121212;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .card {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-            width: 450px;
-            text-align: center;
-        }
-        h2, h3 { 
-            color: white; /* 🔹 Change Headings to White */
-        }
-        .btn-custom {
-            background: #d32f2f;
-            color: white;
-            width: 100%;
-        }
-        .btn-custom:hover {
-            background: #b71c1c;
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>📊 Prediction for {{ ticker }}</h2>
-        <h3>🔮 Predicted Price: <span style="color: white;">${{ predicted_price }}</span></h3>
-        <img src="data:image/png;base64,{{ plot_url }}" class="img-fluid">
-        <br>
-        <a href="/" class="btn btn-custom">🔄 Try Another Prediction</a>
+{% extends "base.html" %}
+
+{% block title %}AI Forecast: {{ result.ticker }} | AlphaPulse AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Top Navigation / Breadcrumbs -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <a href="/" class="text-secondary small text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+            <span class="text-muted small">/</span>
+            <a href="/stock/{{ result.ticker }}" class="text-secondary small text-decoration-none mono">{{ result.ticker }}</a>
+            <span class="text-muted small">/</span>
+            <span class="text-info small fw-bold">Deep Learning Forecast</span>
+        </div>
+        
+        <span class="badge bg-dark border border-secondary border-opacity-50 text-light mono px-3 py-1">
+            <i class="bi bi-cpu text-info me-1"></i> {{ result.model_status }}
+        </span>
     </div>
-</body>
-</html>
+
+    <!-- Main Forecast Banner Card -->
+    <div class="terminal-card card-highlight p-4 mb-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-dark border border-secondary border-opacity-50 text-white mono px-2 py-1 fs-6">
+                        {{ result.ticker }}
+                    </span>
+                    <span class="text-secondary small">{{ company_name }}</span>
+                    <span class="{{ 'badge-bullish-subtle' if result.trend == 'BULLISH' else 'badge-bearish-subtle' }} ms-auto ms-sm-2">
+                        <i class="bi {{ 'bi-graph-up-arrow' if result.trend == 'BULLISH' else 'bi-graph-down-arrow' }} me-1"></i>
+                        {{ result.trend }} TRAJECTORY
+                    </span>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-baseline gap-3 mb-2">
+                    <div>
+                        <span class="text-muted small d-block">Target Projected Price ({{ result.forecast_days }}d):</span>
+                        <span class="display-6 fw-bold mono" style="color: var(--primary-cyan);">
+                            {{ currency_symbol }}{{ result.final_predicted_price }}
+                        </span>
+                    </div>
+
+                    <div class="fs-4 fw-bold mono {{ 'price-up' if result.expected_change >= 0 else 'price-down' }}">
+                        <i class="bi {{ 'bi-caret-up-fill' if result.expected_change >= 0 else 'bi-caret-down-fill' }}"></i>
+                        {{ '+' if result.expected_change >= 0 else '' }}{{ result.expected_change }} ({{ '+' if result.expected_change_pct >= 0 else '' }}{{ result.expected_change_pct }}%)
+                    </div>
+                </div>
+
+                <p class="text-secondary small mb-0">
+                    Projected using an autoregressive multi-step Stacked LSTM network trained over 3 years of daily market closes with a 60-day sequence memory window.
+                </p>
+            </div>
+
+            <!-- Forecast Metric Pill Boxes -->
+            <div class="col-lg-5">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="metric-card p-3">
+                            <div class="metric-label">Current Spot</div>
+                            <div class="text-white mono fw-bold fs-5">{{ currency_symbol }}{{ result.current_price }}</div>
+                            <span class="text-muted small" style="font-size: 0.72rem;">Last recorded close</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card p-3">
+                            <div class="metric-label">Horizon</div>
+                            <div class="text-info mono fw-bold fs-5">{{ result.forecast_days }} Business Days</div>
+                            <span class="text-muted small" style="font-size: 0.72rem;">Market trading days</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card p-3">
+                            <div class="metric-label">95% Lower Band</div>
+                            <div class="text-secondary mono fw-bold fs-6">{{ currency_symbol }}{{ result.chart_data.lower_band[-1] }}</div>
+                            <span class="text-muted small" style="font-size: 0.72rem;">Statistical bound</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-card p-3">
+                            <div class="metric-label">95% Upper Band</div>
+                            <div class="text-secondary mono fw-bold fs-6">{{ currency_symbol }}{{ result.chart_data.upper_band[-1] }}</div>
+                            <span class="text-muted small" style="font-size: 0.72rem;">Statistical bound</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Plotly Forecast Chart -->
+    <div class="terminal-card p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <div>
+                <h5 class="fw-bold text-white mb-0">
+                    <i class="bi bi-graph-up-arrow text-info me-2"></i> Historical Trajectory & Neural Forecast Cone
+                </h5>
+                <span class="text-secondary small">
+                    Actual prices, held-out model test validation, multi-day projection, and 95% statistical confidence cone
+                </span>
+            </div>
+            
+            <div class="d-flex flex-wrap gap-2">
+                <span class="btn-pill-action text-white">● Historical</span>
+                <span class="btn-pill-action text-warning">--- Test Fit</span>
+                <span class="btn-pill-action text-info">━ AI Forecast</span>
+                <span class="btn-pill-action text-muted">░ 95% Cone</span>
+            </div>
+        </div>
+        <div id="predictionChartContainer" style="width: 100%; height: 520px;"></div>
+    </div>
+
+    <!-- Backtest Evaluation Metrics & Recalibration Row -->
+    <div class="row g-4 mb-4">
+        <!-- Rigorous Backtest Metrics -->
+        <div class="col-lg-7">
+            <div class="terminal-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-circle text-success fs-5"></i>
+                        <h5 class="fw-bold text-white mb-0">Out-of-Sample Backtesting Metrics</h5>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-25 text-light small">Held-out Split</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    Calculated by testing the neural network against recent historical trading days that were completely isolated from the training process.
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-6 col-sm-3">
+                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                            <span class="text-secondary small d-block mb-1">RMSE</span>
+                            <h4 class="text-white mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.rmse }}</h4>
+                            <span class="text-muted" style="font-size: 0.72rem;">Std dev error</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                            <span class="text-secondary small d-block mb-1">MAE</span>
+                            <h4 class="text-white mono fw-bold mb-0">{{ currency_symbol }}{{ result.metrics.mae }}</h4>
+                            <span class="text-muted" style="font-size: 0.72rem;">Mean abs error</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                            <span class="text-secondary small d-block mb-1">MAPE</span>
+                            <h4 class="mono fw-bold mb-0" style="color: var(--primary-cyan);">{{ result.metrics.mape }}%</h4>
+                            <span class="text-muted" style="font-size: 0.72rem;">Mean % error</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 text-center">
+                            <span class="text-secondary small d-block mb-1">Directional Acc</span>
+                            <h4 class="text-warning mono fw-bold mb-0">{{ result.metrics.directional_accuracy }}%</h4>
+                            <span class="text-muted" style="font-size: 0.72rem;">Up/Down match</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recalibrate Horizon / Retrain -->
+        <div class="col-lg-5">
+            <div class="terminal-card p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-sliders text-info fs-5"></i>
+                    <h5 class="fw-bold text-white mb-0">Adjust Horizon or Retrain</h5>
+                </div>
+                <p class="text-secondary small mb-3">
+                    Re-run inference across a custom trading horizon or re-fit fresh network weights.
+                </p>
+
+                <form action="/predict" method="POST" class="predict-form">
+                    <input type="hidden" name="ticker" value="{{ result.ticker }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold d-flex justify-content-between">
+                            <span>Forecast Horizon:</span>
+                            <span class="mono fw-bold" style="color: var(--primary-cyan);" id="recalHorizonVal">{{ result.forecast_days }} Business Days</span>
+                        </label>
+                        <input type="range" name="days" class="form-range" min="7" max="90" value="{{ result.forecast_days }}" oninput="document.getElementById('recalHorizonVal').innerText = this.value + ' Business Days'">
+                        <div class="d-flex justify-content-between text-muted small mono">
+                            <span>7d</span>
+                            <span>30d</span>
+                            <span>60d</span>
+                            <span>90d</span>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="force_retrain" id="forceRetrainToggle" value="true">
+                        <label class="form-check-label text-muted small" for="forceRetrainToggle">
+                            Force neural network re-training
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-primary-gradient flex-grow-1 justify-content-center py-2" style="font-size: 0.88rem;">
+                            <i class="bi bi-arrow-repeat"></i> Update Forecast
+                        </button>
+                        <a href="/stock/{{ result.ticker }}" class="btn-secondary-glass py-2" style="font-size: 0.88rem;">
+                            Technicals
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chartPayload = {{ result.chart_data|tojson }};
+    const currencySymbol = "{{ currency_symbol }}";
+    renderPredictionChart('predictionChartContainer', chartPayload, currencySymbol);
+</script>
+{% endblock %}

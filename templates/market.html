@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ market_title }} | AlphaPulse AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    <!-- Market Header Card -->
+    <div class="terminal-card p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fs-4">{{ market_flag }}</span>
+                    <h2 class="fw-bold text-white mb-0">{{ market_name }}</h2>
+                    <span class="badge {{ 'bg-success' if status.is_open else 'bg-secondary' }} px-2 py-1 ms-2">
+                        {{ 'MARKET OPEN' if status.is_open else 'MARKET CLOSED' }}
+                    </span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-3 text-secondary small">
+                    <span><i class="bi bi-clock me-1"></i> Trading Session: <strong class="text-white">{{ status.hours }}</strong></span>
+                    <span>•</span>
+                    <span><i class="bi bi-geo-alt me-1"></i> Local Exchange Time: <strong class="text-info mono">{{ status.current_time }}</strong></span>
+                    <span>•</span>
+                    <span><i class="bi bi-collection me-1"></i> Listed Equities: <strong class="text-white">{{ stocks|length }} Bluechips</strong></span>
+                </div>
+            </div>
+
+            <!-- Instant Search Input -->
+            <div class="terminal-search" style="width: 100%; max-width: 300px;">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" id="marketFilterInput" placeholder="Filter by symbol, name, or sector...">
+            </div>
+        </div>
+
+        <!-- Sector Filter Pills -->
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top border-secondary border-opacity-25" id="sectorFilterContainer">
+            <button class="btn-pill-action active" onclick="filterBySector('all', this)">All Sectors ({{ stocks|length }})</button>
+            <button class="btn-pill-action" onclick="filterBySector('information technology', this)">Technology</button>
+            <button class="btn-pill-action" onclick="filterBySector('financial', this)">Financial Services</button>
+            <button class="btn-pill-action" onclick="filterBySector('energy', this)">Energy & Mining</button>
+            <button class="btn-pill-action" onclick="filterBySector('consumer', this)">Consumer Goods</button>
+            <button class="btn-pill-action" onclick="filterBySector('pharma', this)">Healthcare & Pharma</button>
+            <button class="btn-pill-action" onclick="filterBySector('automobile', this)">Automobile</button>
+        </div>
+    </div>
+
+    <!-- Stock Catalog Grid -->
+    <div class="row g-3" id="stockGrid">
+        {% for stock in stocks %}
+        <div class="col-xl-3 col-lg-4 col-sm-6 stock-item" 
+             data-symbol="{{ stock.symbol|lower }}" 
+             data-name="{{ stock.name|lower }}" 
+             data-sector="{{ stock.sector|lower }}">
+            <div class="terminal-card p-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-dark border border-secondary border-opacity-50 text-white mono px-2 py-1">
+                            {{ stock.symbol }}
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-25 text-light small" style="font-size: 0.72rem;">
+                            {{ stock.sector }}
+                        </span>
+                    </div>
+                    <h6 class="text-white fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
+                </div>
+                
+                <div class="d-flex gap-2 mt-3 pt-3 border-top border-secondary border-opacity-25">
+                    <a href="/stock/{{ stock.symbol }}" class="btn-pill-action flex-grow-1 justify-content-center">
+                        <i class="bi bi-graph-up me-1"></i> Analysis
+                    </a>
+                    <form action="/predict" method="POST" class="predict-form flex-grow-1">
+                        <input type="hidden" name="ticker" value="{{ stock.symbol }}">
+                        <input type="hidden" name="days" value="30">
+                        <button type="submit" class="btn-pill-action w-100 justify-content-center text-info border-info border-opacity-25">
+                            <i class="bi bi-cpu me-1"></i> Predict
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- No Match Alert -->
+    <div id="noMatchMessage" class="text-center py-5" style="display: none;">
+        <i class="bi bi-search text-muted fs-1 mb-2"></i>
+        <h5 class="text-white fw-bold">No Matching Stocks Found</h5>
+        <p class="text-muted small">Try adjusting your keyword or sector filter.</p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeSector = 'all';
+
+    function filterBySector(sec, el) {
+        activeSector = sec.toLowerCase();
+        
+        // Update active class on buttons
+        document.querySelectorAll('#sectorFilterContainer .btn-pill-action').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        
+        applyFilters();
+    }
+
+    document.getElementById('marketFilterInput').addEventListener('input', () => {
+        applyFilters();
+    });
+
+    function applyFilters() {
+        const query = document.getElementById('marketFilterInput').value.toLowerCase().trim();
+        const items = document.querySelectorAll('.stock-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const sym = item.getAttribute('data-symbol');
+            const name = item.getAttribute('data-name');
+            const sec = item.getAttribute('data-sector');
+
+            const matchesQuery = !query || sym.includes(query) || name.includes(query) || sec.includes(query);
+            const matchesSector = (activeSector === 'all') || sec.includes(activeSector);
+
+            if (matchesQuery && matchesSector) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        document.getElementById('noMatchMessage').style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

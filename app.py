@@ -1,239 +1,239 @@
-from flask import Flask, render_template, request
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')  # Use non-GUI backend for Flask
-import matplotlib.pyplot as plt
-import io
-import base64
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
 import os
-from tqdm import tqdm
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from config import Config
+from services import stock_service, ml_service, market_service
 
-app = Flask(__name__)
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-# 📌 Make sure data folder exists
-os.makedirs("data", exist_ok=True)
-
-# 📌 Expanded stock lists (50 Indian + 50 US stocks)
-indian_stocks = [
-    "RELIANCE.NS", "TATASTEEL.NS", "INFY.NS", "HDFCBANK.NS", "LUXIND.NS",
-    "ICICIBANK.NS", "SBIN.NS", "BHARTIARTL.NS", "HCLTECH.NS", "ITC.NS",
-    "TCS.NS", "MARUTI.NS", "LT.NS", "AXISBANK.NS", "KOTAKBANK.NS",
-    "JSWSTEEL.NS", "SUNPHARMA.NS", "WIPRO.NS", "HINDUNILVR.NS", "BAJFINANCE.NS",
-    "TECHM.NS", "DRREDDY.NS", "ADANIPORTS.NS", "ONGC.NS", "NTPC.NS",
-    "VEDL.NS", "UPL.NS", "BPCL.NS", "GRASIM.NS", "COALINDIA.NS",
-    "SBILIFE.NS", "DIVISLAB.NS", "EICHERMOT.NS", "TITAN.NS", "CIPLA.NS",
-    "ULTRACEMCO.NS", "ICICIPRULI.NS", "BAJAJ-AUTO.NS", "M&M.NS", "BEL.NS",
-    "HINDALCO.NS", "INDUSINDBK.NS", "BRITANNIA.NS", "PIDILITIND.NS", "HDFCLIFE.NS",
-    "SHREECEM.NS", "COLPAL.NS", "GAIL.NS", "TATACONSUM.NS", "BANKBARODA.NS"
-]
-
-us_stocks = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
-    "META", "NVDA", "BRK-B", "JNJ", "V",
-    "JPM", "PG", "DIS", "MA", "HD",
-    "NFLX", "KO", "PEP", "BAC", "XOM",
-    "ABBV", "ADBE", "CRM", "CSCO", "ORCL",
-    "INTC", "CMCSA", "NKE", "WMT", "MCD",
-    "PYPL", "QCOM", "COST", "AVGO", "ACN",
-    "TXN", "AMGN", "HON", "UNH", "UPS",
-    "IBM", "MDLZ", "LIN", "RTX", "SBUX",
-    "INTU", "GE", "CAT", "DE", "BLK"
-]
-
-all_stocks = indian_stocks + us_stocks
-
-# 📌 Helper to download single stock data cleanly
-def fetch_stock_data(ticker, period="3y"):
-    try:
-        t = yf.Ticker(ticker)
-        df = t.history(period=period)
-        if df.empty:
-            df = yf.download(ticker, period=period, progress=False)
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-        df = df.reset_index()
-        if 'Date' not in df.columns and 'Datetime' in df.columns:
-            df.rename(columns={'Datetime': 'Date'}, inplace=True)
-        return df
-    except Exception as e:
-        print(f"Error downloading {ticker}: {e}")
-        return None
-
-# 📌 Download & cache all stocks
-def download_and_cache_stocks():
-    print("\nDownloading all stocks for caching...")
-    for ticker in tqdm(all_stocks):
-        filepath = f"data/{ticker}.csv"
-        if os.path.exists(filepath):
-            continue  # already cached
-        df = fetch_stock_data(ticker)
-        if df is not None and not df.empty and 'Close' in df.columns:
-            df.to_csv(filepath, index=False)
-    print("\n✅ Finished caching stocks.")
-
-# 📌 Load stock from cached CSV
-def load_stock_data(ticker, max_retries=3):
-    import time
-    filepath = f"data/{ticker}.csv"
-
-    # Retry download if missing or corrupted
-    for attempt in range(max_retries):
-        if not os.path.exists(filepath):
-            try:
-                df = fetch_stock_data(ticker)
-                if df is not None and not df.empty and 'Close' in df.columns:
-                    df.to_csv(filepath, index=False)
-                else:
-                    raise ValueError("No valid stock data returned")
-            except Exception as e:
-                print(f"Attempt {attempt+1} failed for {ticker}: {e}")
-                time.sleep(2)
-                continue
-
-        # Load CSV safely
+    # Context processor to inject market ribbon data into all templates
+    @app.context_processor
+    def inject_global_market_context():
         try:
-            df = pd.read_csv(filepath)
-            
-            # Handle possible MultiIndex format from old cached files
-            if 'Close' not in df.columns:
-                df = pd.read_csv(filepath, header=[0, 1])
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
-            
-            if 'Close' not in df.columns:
-                raise ValueError("No Close column in CSV")
-
-            df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
-
-            date_col = 'Date' if 'Date' in df.columns else df.columns[0]
-            df['Date'] = pd.to_datetime(df[date_col], errors='coerce', utc=True)
-            df = df.dropna(subset=['Date', 'Close'])
-            df.set_index('Date', inplace=True)
-            df.sort_index(inplace=True)
-
-            if len(df) < 60:
-                raise ValueError(f"Insufficient data ({len(df)} rows) for 60-day sequence")
-
-            return df[['Close']]
+            status = market_service.get_market_status()
+            indices = market_service.get_market_indices()
         except Exception as e:
-            print(f"Error loading {ticker}: {e}")
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            time.sleep(2)
-            continue
-    return None
+            print(f"[ContextProcessor Error]: {e}")
+            status, indices = {}, []
+        return dict(market_status=status, market_indices=indices)
 
+    # 📌 Health Check for Render & Cloud Monitors
+    @app.route("/health")
+    @app.route("/healthz")
+    def health_check():
+        return jsonify({"status": "healthy", "service": "AlphaPulse AI"}), 200
 
+    # 📌 Home Dashboard
+    @app.route("/")
+    def index():
+        return render_template(
+            "index.html",
+            active_page="home",
+            featured_indian=Config.INDIAN_STOCKS,
+            featured_us=Config.US_STOCKS
+        )
 
-# 📌 Prepare data for LSTM
-def prepare_data(data, time_step=60):
-    scaler = MinMaxScaler(feature_range=(0,1))
-    data_scaled = scaler.fit_transform(data)
+    # 📌 Indian Market Explorer
+    @app.route("/market/india")
+    def market_india():
+        status = market_service.get_market_status()["india"]
+        return render_template(
+            "market.html",
+            active_page="indian",
+            market_name="NSE (National Stock Exchange)",
+            market_title="Indian Equities (NSE)",
+            market_flag="🇮🇳",
+            stocks=Config.INDIAN_STOCKS,
+            status=status
+        )
 
-    X, Y = [], []
-    for i in range(len(data_scaled) - time_step):
-        X.append(data_scaled[i:i+time_step])
-        Y.append(data_scaled[i+time_step])
-    
-    return np.array(X), np.array(Y), scaler
+    # 📌 US Market Explorer
+    @app.route("/market/us")
+    def market_us():
+        status = market_service.get_market_status()["us"]
+        return render_template(
+            "market.html",
+            active_page="us",
+            market_name="US Equities (NYSE / NASDAQ)",
+            market_title="US Equities (NYSE/NASDAQ)",
+            market_flag="🇺🇸",
+            stocks=Config.US_STOCKS,
+            status=status
+        )
 
-# 📌 Train LSTM model
-def train_lstm(X_train, Y_train):
-    model = Sequential([
-        LSTM(50, return_sequences=True, input_shape=(60, 1)),
-        Dropout(0.2),
-        LSTM(50, return_sequences=False),
-        Dropout(0.2),
-        Dense(25),
-        Dense(1)
-    ])
-    
-    model.compile(optimizer="adam", loss="mean_squared_error")
-    model.fit(X_train, Y_train, epochs=10, batch_size=32, verbose=0)
-    
-    return model
+    # 📌 Deep-Dive Stock Analysis
+    @app.route("/stock/<ticker>")
+    def stock_detail(ticker):
+        ticker = stock_service.normalize_ticker(ticker)
+        profile = stock_service.get_stock_profile(ticker)
+        
+        # Historical prices & technicals for interactive candlestick chart
+        df = stock_service.fetch_history(ticker, period="1y")
+        if df.empty or len(df) < 20:
+            return render_template(
+                "error.html",
+                error_title=f"Insufficient Market Data for '{ticker}'",
+                error_message="The selected equity symbol does not have sufficient recent trading history to render technical analysis charts."
+            ), 404
 
-# 📌 Predict next days
-def predict_next_days(model, data, scaler, days=30):
-    last_60_days = data[-60:].values
-    scaled_data = scaler.transform(last_60_days)
+        df_tech = stock_service.calculate_technicals(df)
+        
+        # Serialize candlestick payload for Plotly
+        dates = [d.strftime('%Y-%m-%d') for d in df_tech.index]
+        chart_payload = {
+            "dates": dates,
+            "opens": [round(float(x), 2) for x in df_tech['Open'].values],
+            "highs": [round(float(x), 2) for x in df_tech['High'].values],
+            "lows": [round(float(x), 2) for x in df_tech['Low'].values],
+            "closes": [round(float(x), 2) for x in df_tech['Close'].values],
+            "volumes": [int(x) for x in df_tech['Volume'].values],
+            "sma20": [round(float(x), 2) if not np.isnan(x) else None for x in df_tech['SMA_20'].values],
+            "sma50": [round(float(x), 2) if not np.isnan(x) else None for x in df_tech['SMA_50'].values]
+        }
 
-    predictions = []
-    for _ in range(days):
-        X_input = scaled_data[-60:].reshape(1, 60, 1)
-        pred = model.predict(X_input, verbose=0)
-        predictions.append(pred[0][0])
-        scaled_data = np.append(scaled_data, pred)[1:].reshape(-1, 1)
+        # Latest technical indicators snapshot
+        latest = df_tech.iloc[-1]
+        technicals = {
+            "rsi": round(float(latest['RSI_14']), 1) if not np.isnan(latest.get('RSI_14', np.nan)) else "N/A",
+            "macd": round(float(latest['MACD']), 2) if not np.isnan(latest.get('MACD', np.nan)) else "N/A",
+            "macd_signal": round(float(latest['MACD_Signal']), 2) if not np.isnan(latest.get('MACD_Signal', np.nan)) else "N/A",
+            "bb_upper": round(float(latest['BB_Upper']), 2) if not np.isnan(latest.get('BB_Upper', np.nan)) else "N/A",
+            "bb_lower": round(float(latest['BB_Lower']), 2) if not np.isnan(latest.get('BB_Lower', np.nan)) else "N/A",
+            "sma_20": round(float(latest['SMA_20']), 2) if not np.isnan(latest.get('SMA_20', np.nan)) else "N/A",
+            "sma_50": round(float(latest['SMA_50']), 2) if not np.isnan(latest.get('SMA_50', np.nan)) else "N/A",
+            "sma_200": round(float(latest['SMA_200']), 2) if not np.isnan(latest.get('SMA_200', np.nan)) else "N/A",
+            "volatility": round(float(latest['Volatility_30']), 2) if not np.isnan(latest.get('Volatility_30', np.nan)) else "N/A"
+        }
 
-    return scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        return render_template(
+            "stock.html",
+            active_page="stock",
+            profile=profile,
+            technicals=technicals,
+            chart_payload=chart_payload
+        )
 
-# 📌 Home page
-@app.route("/")
-def home():
-    return render_template("index.html")
+    # 📌 Deep Learning Prediction Endpoint
+    @app.route("/predict", methods=["GET", "POST"])
+    def predict():
+        if request.method == "GET":
+            ticker = request.args.get("ticker", "AAPL")
+            days = int(request.args.get("days", 30))
+            force_retrain = request.args.get("force_retrain", "false").lower() == "true"
+        else:
+            ticker = request.form.get("ticker", "").strip()
+            try:
+                days = int(request.form.get("days", 30))
+            except ValueError:
+                days = 30
+            force_retrain = request.form.get("force_retrain") == "true"
 
-# 📌 Indian stock page
-@app.route("/indian")
-def indian_stocks_page():
-    return render_template("indian.html")
+        if not ticker:
+            return redirect(url_for("index"))
 
-# 📌 US stock page
-@app.route("/us")
-def us_stocks_page():
-    return render_template("us.html")
+        ticker = stock_service.normalize_ticker(ticker)
+        currency_info = stock_service.get_currency_info(ticker)
 
-# 📌 Prediction function
-def predict_stock(indian=False):
-    ticker = request.form["ticker"].upper().strip()
-    days = int(request.form["days"])
+        # Retrieve historical training dataset
+        df = stock_service.fetch_history(ticker, period="3y")
+        if df.empty or len(df) < Config.LOOKBACK_WINDOW + 20:
+            return render_template(
+                "error.html",
+                error_title=f"Could not load data for symbol '{ticker}'",
+                error_message="Yahoo Finance returned no historical price series or the asset was recently listed. Please verify the ticker."
+            ), 400
 
-    if indian and not (ticker.endswith(".NS") or ticker.endswith(".BO")):
-        ticker += ".NS"
+        # Execute Machine Learning pipeline
+        result = ml_service.run_prediction_pipeline(
+            ticker=ticker,
+            df=df,
+            forecast_days=days,
+            force_retrain=force_retrain
+        )
 
-    stock_data = load_stock_data(ticker)
-    if stock_data is None:
-        return f"Error: No stock data found for {ticker}. Please check the symbol and try again."
+        if not result.get("success"):
+            return render_template(
+                "error.html",
+                error_title="Model Execution Failed",
+                error_message=f"Deep learning pipeline could not complete: {result.get('error')}"
+            ), 500
 
-    X_train, Y_train, scaler = prepare_data(stock_data)
-    model = train_lstm(X_train, Y_train)
+        # Get company profile for name
+        profile = stock_service.get_stock_profile(ticker)
 
-    predicted_prices = predict_next_days(model, stock_data[['Close']], scaler, days=days)
-    future_dates = pd.date_range(start=stock_data.index[-1], periods=days+1, freq='B')[1:]
+        return render_template(
+            "predict.html",
+            active_page="predict",
+            result=result,
+            company_name=profile["name"],
+            currency_symbol=currency_info["symbol"]
+        )
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(stock_data.index, stock_data['Close'], color='red', label="Actual Price")
-    plt.plot(future_dates, predicted_prices, color='blue', label="Predicted Price")
-    plt.xlabel("Time")
-    plt.ylabel(f"{ticker} Stock Price")
-    plt.title(f"{ticker} Stock Price Prediction")
-    plt.legend()
+    # 📌 Backward Compatibility Routes
+    @app.route("/indian")
+    def legacy_indian():
+        return redirect(url_for("market_india"))
 
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    plot_url = base64.b64encode(img.getvalue()).decode()
-    plt.close()
+    @app.route("/us")
+    def legacy_us():
+        return redirect(url_for("market_us"))
 
-    return render_template("predict.html", 
-                           ticker=ticker, 
-                           predicted_price=round(predicted_prices[-1][0], 2), 
-                           plot_url=plot_url)
+    @app.route("/predict_indian", methods=["POST"])
+    def legacy_predict_indian():
+        ticker = request.form.get("ticker", "")
+        days = request.form.get("days", 30)
+        ticker = stock_service.normalize_ticker(ticker, is_indian=True)
+        return redirect(url_for("predict", ticker=ticker, days=days))
 
-# 📌 Prediction routes
-@app.route("/predict_indian", methods=["POST"])
-def predict_indian():
-    return predict_stock(indian=True)
+    @app.route("/predict_us", methods=["POST"])
+    def legacy_predict_us():
+        ticker = request.form.get("ticker", "")
+        days = request.form.get("days", 30)
+        ticker = stock_service.normalize_ticker(ticker, is_indian=False)
+        return redirect(url_for("predict", ticker=ticker, days=days))
 
-@app.route("/predict_us", methods=["POST"])
-def predict_us():
-    return predict_stock(indian=False)
+    # 📌 REST APIs for Autocomplete & Data Fetching
+    @app.route("/api/search")
+    def api_search():
+        q = request.args.get("q", "")
+        results = stock_service.search(q)
+        return jsonify({"results": results})
 
-# 📌 Run app
+    @app.route("/api/stock/<ticker>")
+    def api_stock_profile(ticker):
+        ticker = stock_service.normalize_ticker(ticker)
+        profile = stock_service.get_stock_profile(ticker)
+        return jsonify(profile)
+
+    # 📌 Global Error Handlers
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template(
+            "error.html",
+            error_title="404 - Page Not Found",
+            error_message="The requested financial analytics page or equity symbol could not be located."
+        ), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        return render_template(
+            "error.html",
+            error_title="500 - Internal Service Error",
+            error_message="The financial analytics server encountered an internal condition. Please try again shortly."
+        ), 500
+
+    return app
+
+# WSGI Entry Application Instance
+import numpy as np  # Needed for NaN handling in stock_detail
+app = create_app()
+
 if __name__ == "__main__":
-    download_and_cache_stocks()  # Pre-download 100+ stocks
-    app.run(debug=True)
+    # Create necessary directories
+    os.makedirs(Config.DATA_DIR, exist_ok=True)
+    os.makedirs(Config.MODELS_DIR, exist_ok=True)
+    
+    port = int(os.environ.get("PORT", 5001))
+    print(f"🚀 AlphaPulse AI Production Server running on http://127.0.0.1:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False)

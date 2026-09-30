@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: alphapulse_stock_predictor
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5001
+      - SECRET_KEY=prod-alphapulse-super-secret-key-2026
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    restart: unless-stopped

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AlphaPulse AI | Enterprise Stock Intelligence & Deep Learning Forecasts{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Plotly.js for interactive financial charts -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <!-- Custom Terminal Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background Ambient Glow -->
+    <div class="bg-ambient-glow"></div>
+
+    <!-- Top Market Status & Animated Ticker Ribbon -->
+    <div class="ticker-ribbon-container">
+        <!-- Market Status Pills -->
+        {% if market_status %}
+        <div class="market-status-group">
+            <div class="status-indicator">
+                <span class="status-dot {{ 'active' if market_status.india.is_open else 'closed' }}"></span>
+                <span class="text-white fw-semibold">NSE:</span>
+                <span class="text-muted small">{{ 'OPEN' if market_status.india.is_open else 'CLOSED' }}</span>
+                <span class="text-secondary mono small ms-1" style="font-size: 0.75rem;">({{ market_status.india.current_time }})</span>
+            </div>
+            <div class="status-indicator border-start ps-3 border-secondary border-opacity-25">
+                <span class="status-dot {{ 'active' if market_status.us.is_open else 'closed' }}"></span>
+                <span class="text-white fw-semibold">NYSE:</span>
+                <span class="text-muted small">{{ 'OPEN' if market_status.us.is_open else 'CLOSED' }}</span>
+                <span class="text-secondary mono small ms-1" style="font-size: 0.75rem;">({{ market_status.us.current_time }})</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Smooth Infinite Ticker Tape -->
+        {% if market_indices %}
+        <div class="ticker-tape-wrapper">
+            <div class="ticker-tape-track">
+                {% for _ in range(2) %}
+                    {% for idx in market_indices %}
+                    <div class="tape-item">
+                        <span class="symbol">{{ idx.name }}:</span>
+                        <span class="val">{{ idx.currency }}{{ idx.price }}</span>
+                        <span class="mono {{ 'price-up' if idx.is_positive else 'price-down' }}" style="font-size: 0.8rem;">
+                            <i class="bi {{ 'bi-caret-up-fill' if idx.is_positive else 'bi-caret-down-fill' }}"></i>
+                            {{ idx.change_pct }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-terminal">
+        <div class="container-fluid px-lg-4">
+            <a class="brand-wrapper" href="/">
+                <div class="brand-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div>
+                    <div class="brand-title">
+                        AlphaPulse<span style="color: var(--primary-cyan)">.AI</span>
+                        <span class="brand-tag">ENTERPRISE</span>
+                    </div>
+                </div>
+            </a>
+
+            <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <i class="bi bi-list fs-2"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1">
+                    <li class="nav-item">
+                        <a class="nav-link-custom {{ 'active' if active_page == 'home' else '' }}" href="/">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link-custom {{ 'active' if active_page == 'indian' else '' }}" href="/market/india">
+                            <span>🇮🇳</span> Indian Bluechips
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link-custom {{ 'active' if active_page == 'us' else '' }}" href="/market/us">
+                            <span>🇺🇸</span> US Market Leaders
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Terminal Search with Autocomplete -->
+                <div class="terminal-search me-lg-3 my-2 my-lg-0">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" id="globalSearchInput" placeholder="Search ticker or company (e.g. AAPL, RELIANCE)..." autocomplete="off">
+                    <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+                </div>
+
+                <a href="/market/india" class="btn-primary-gradient py-2 px-3 text-nowrap" style="font-size: 0.85rem;">
+                    <i class="bi bi-cpu-fill"></i> AI Screener
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Dynamic Content -->
+    <main class="flex-grow-1 position-relative" style="z-index: 1;">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Production Neural Network Loading Overlay -->
+    <div id="loadingOverlay" class="terminal-loader-overlay">
+        <div class="neural-spinner mb-3">
+            <div class="neural-ring"></div>
+            <div class="neural-ring"></div>
+            <div class="neural-ring"></div>
+        </div>
+        <h4 class="text-white fw-bold mb-1">Deep Learning Inference in Progress</h4>
+        <p class="text-muted small mb-3">Stacked LSTM Multi-Horizon Sequence Execution</p>
+        
+        <div class="loader-steps bg-dark bg-opacity-75 p-3 rounded-3 border border-secondary border-opacity-25">
+            <div class="loader-step-item">
+                <i class="bi bi-check-circle-fill"></i> Ingesting 3-Year Time-Series Quotes
+            </div>
+            <div class="loader-step-item">
+                <i class="bi bi-arrow-repeat"></i> Standardizing 60-Day Sliding Windows
+            </div>
+            <div class="loader-step-item">
+                <i class="bi bi-cpu"></i> Evaluating Out-of-Sample Backtesting Metrics
+            </div>
+            <div class="loader-step-item">
+                <i class="bi bi-graph-up"></i> Projecting 95% Confidence Interval Cone
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Terminal Footer -->
+    <footer class="terminal-footer">
+        <div class="container text-center">
+            <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 gap-md-4 mb-2 small">
+                <span class="text-white fw-semibold"><i class="bi bi-cpu-fill text-info me-1"></i> Stacked LSTM Architecture</span>
+                <span class="text-muted">•</span>
+                <span class="text-white fw-semibold"><i class="bi bi-shield-check text-success me-1"></i> Out-of-Sample Backtesting</span>
+                <span class="text-muted">•</span>
+                <span class="text-white fw-semibold"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Sub-Second Cached Inference</span>
+                <span class="text-muted">•</span>
+                <span>Yahoo Finance Engine</span>
+            </div>
+            <p class="small mb-0 text-muted" style="max-width: 700px; margin: 0 auto;">
+                AlphaPulse AI Financial Intelligence Platform &copy; 2026. Designed for institutional research, quantitative analysis, and educational demonstration. Not investment advice.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom Terminal JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
