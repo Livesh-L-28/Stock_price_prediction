@@ -6,7 +6,7 @@ echo "📦 Upgrading pip..."
 pip install --upgrade pip
 
 echo "📦 Installing production dependencies..."
-pip install -r requirements.txt
+pip install --no-cache-dir -r requirements.txt
 
 echo "📁 Creating persistent application directories..."
 mkdir -p data models
