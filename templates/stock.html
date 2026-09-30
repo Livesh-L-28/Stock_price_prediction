@@ -6,14 +6,25 @@
 <div class="container py-4">
 
     <!-- Top Navigation / Breadcrumbs -->
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <a href="/" class="text-secondary small text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
-        <span class="text-muted small">/</span>
-        <a href="/market/{{ 'india' if profile.symbol.endswith('.NS') or profile.symbol.endswith('.BO') else 'us' }}" class="text-secondary small text-decoration-none">
-            {{ 'Indian Markets (NSE)' if profile.symbol.endswith('.NS') or profile.symbol.endswith('.BO') else 'US Markets' }}
-        </a>
-        <span class="text-muted small">/</span>
-        <span class="text-info small fw-bold mono">{{ profile.symbol }}</span>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <a href="/" class="text-secondary small text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+            <span class="text-muted small">/</span>
+            <a href="/market/{{ 'india' if profile.symbol.endswith('.NS') or profile.symbol.endswith('.BO') else 'us' }}" class="text-secondary small text-decoration-none">
+                {{ 'Indian Markets (NSE)' if profile.symbol.endswith('.NS') or profile.symbol.endswith('.BO') else 'US Markets' }}
+            </a>
+            <span class="text-muted small">/</span>
+            <span class="text-info small fw-bold mono">{{ profile.symbol }}</span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn-pill-action" id="watchlistToggleBtn" onclick="toggleWatchlist('{{ profile.symbol }}')">
+                <i class="bi bi-star"></i> <span>Watchlist</span>
+            </button>
+            <a href="/stock/{{ profile.symbol }}/export-csv" class="btn-pill-action">
+                <i class="bi bi-download text-primary"></i> <span>Export CSV</span>
+            </a>
+        </div>
     </div>
 
     <!-- Stock Header & Live Metrics -->
@@ -214,6 +225,46 @@
         </div>
     </div>
 
+    <!-- Real-Time News & Sentiment Analysis -->
+    {% if news and news.articles %}
+    <div class="terminal-card p-4 mb-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-newspaper text-warning fs-5"></i>
+                <h5 class="fw-bold text-white mb-0">Financial News & Sentiment Polarities</h5>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-muted">Market Sentiment:</span>
+                <span class="{{ news.sentiment_summary.badge_class }} px-2 py-1">
+                    {{ news.sentiment_summary.label }} ({{ news.sentiment_summary.bullish_pct }}% Bullish)
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            {% for item in news.articles %}
+            <div class="col-md-6">
+                <div class="p-3 rounded-3 h-100 d-flex flex-column justify-content-between" style="background: rgba(14, 18, 28, 0.6); border: 1px solid var(--border-subtle);">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted">{{ item.publisher }} • {{ item.time_ago }}</span>
+                            <span class="{{ item.sentiment.badge_class }}" style="font-size: 0.7rem;">{{ item.sentiment.label }}</span>
+                        </div>
+                        <h6 class="text-white fw-semibold mb-2" style="font-size: 0.92rem; line-height: 1.4;">{{ item.title }}</h6>
+                    </div>
+                    {% if item.url != '#' %}
+                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="small text-info text-decoration-none">
+                        Read Coverage <i class="bi bi-box-arrow-up-right ms-1"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Company Business Profile -->
     <div class="terminal-card p-4">
         <h5 class="fw-bold text-white mb-2"><i class="bi bi-info-circle text-info me-2"></i> About {{ profile.name }}</h5>
@@ -229,9 +280,11 @@
 <script>
     const chartPayload = {{ chart_payload|tojson }};
     const currencySymbol = "{{ profile.currency_symbol }}";
+    const currentTicker = "{{ profile.symbol }}";
     let currentMode = 'candlestick';
 
     renderStockDetailChart('stockChartContainer', chartPayload, currencySymbol, currentMode);
+    updateWatchlistButtonState(currentTicker);
 
     function toggleChartType(mode) {
         currentMode = mode;

@@ -1,11 +1,33 @@
 import os
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+import io
+import csv
+import logging
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import numpy as np
+
 from config import Config
-from services import stock_service, ml_service, market_service
+from services import stock_service, ml_service, market_service, news_service
+
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
+)
+logger = logging.getLogger("alphapulse")
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # Production Rate Limiter
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=["300 per day", "100 per hour"],
+        storage_uri="memory://"
+    )
 
     # Context processor to inject market ribbon data into all templates
     @app.context_processor
@@ -14,7 +36,7 @@ def create_app():
             status = market_service.get_market_status()
             indices = market_service.get_market_indices()
         except Exception as e:
-            print(f"[ContextProcessor Error]: {e}")
+            logger.warning(f"Market context error: {e}")
             status, indices = {}, []
         return dict(market_status=status, market_indices=indices)
 
@@ -106,20 +128,28 @@ def create_app():
             "volatility": round(float(latest['Volatility_30']), 2) if not np.isnan(latest.get('Volatility_30', np.nan)) else "N/A"
         }
 
+        # Real-time News & Financial Sentiment
+        news_data = news_service.get_stock_news(ticker)
+
         return render_template(
             "stock.html",
             active_page="stock",
             profile=profile,
             technicals=technicals,
-            chart_payload=chart_payload
+            chart_payload=chart_payload,
+            news=news_data
         )
 
-    # 📌 Deep Learning Prediction Endpoint
+    # 📌 Deep Learning Prediction Endpoint (Rate Limited to 15 requests per minute)
     @app.route("/predict", methods=["GET", "POST"])
+    @limiter.limit("15 per minute")
     def predict():
         if request.method == "GET":
             ticker = request.args.get("ticker", "AAPL")
-            days = int(request.args.get("days", 30))
+            try:
+                days = int(request.args.get("days", 30))
+            except ValueError:
+                days = 30
             force_retrain = request.args.get("force_retrain", "false").lower() == "true"
         else:
             ticker = request.form.get("ticker", "").strip()
@@ -144,7 +174,7 @@ def create_app():
                 error_message="Yahoo Finance returned no historical price series or the asset was recently listed. Please verify the ticker."
             ), 400
 
-        # Execute Machine Learning pipeline
+        # Execute Multivariate Machine Learning pipeline
         result = ml_service.run_prediction_pipeline(
             ticker=ticker,
             df=df,
@@ -159,16 +189,83 @@ def create_app():
                 error_message=f"Deep learning pipeline could not complete: {result.get('error')}"
             ), 500
 
-        # Get company profile for name
         profile = stock_service.get_stock_profile(ticker)
+        news_data = news_service.get_stock_news(ticker, max_items=4)
 
         return render_template(
             "predict.html",
             active_page="predict",
             result=result,
             company_name=profile["name"],
-            currency_symbol=currency_info["symbol"]
+            currency_symbol=currency_info["symbol"],
+            news=news_data
         )
+
+    # 📌 Export Stock Data & Technicals to CSV
+    @app.route("/stock/<ticker>/export-csv")
+    def export_stock_csv(ticker):
+        ticker = stock_service.normalize_ticker(ticker)
+        df = stock_service.fetch_history(ticker, period="1y")
+        
+        if df.empty:
+            return "No data found to export.", 404
+
+        df_tech = stock_service.calculate_technicals(df)
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow(["Date", "Open", "High", "Low", "Close", "Volume", "SMA_20", "SMA_50", "RSI_14", "MACD", "BB_Upper", "BB_Lower"])
+
+        for dt, row in df_tech.iterrows():
+            writer.writerow([
+                dt.strftime('%Y-%m-%d'),
+                round(float(row.get('Open', 0)), 2),
+                round(float(row.get('High', 0)), 2),
+                round(float(row.get('Low', 0)), 2),
+                round(float(row.get('Close', 0)), 2),
+                int(row.get('Volume', 0)),
+                round(float(row.get('SMA_20', 0)), 2) if not np.isnan(row.get('SMA_20', np.nan)) else "",
+                round(float(row.get('SMA_50', 0)), 2) if not np.isnan(row.get('SMA_50', np.nan)) else "",
+                round(float(row.get('RSI_14', 0)), 2) if not np.isnan(row.get('RSI_14', np.nan)) else "",
+                round(float(row.get('MACD', 0)), 2) if not np.isnan(row.get('MACD', np.nan)) else "",
+                round(float(row.get('BB_Upper', 0)), 2) if not np.isnan(row.get('BB_Upper', np.nan)) else "",
+                round(float(row.get('BB_Lower', 0)), 2) if not np.isnan(row.get('BB_Lower', np.nan)) else ""
+            ])
+
+        response = Response(output.getvalue(), mimetype="text/csv")
+        response.headers["Content-Disposition"] = f"attachment; filename={ticker}_historical_analytics.csv"
+        return response
+
+    # 📌 Real-time Training Progress API
+    @app.route("/api/train-progress/<ticker>")
+    def train_progress(ticker):
+        ticker = stock_service.normalize_ticker(ticker)
+        status = ml_service.training_status.get(ticker, {"status": "idle", "progress_pct": 100})
+        return jsonify(status)
+
+    # 📌 Real-Time Watchlist Batch Quotes API
+    @app.route("/api/watchlist/quotes", methods=["POST"])
+    def watchlist_quotes():
+        data = request.get_json() or {}
+        tickers = data.get("tickers", [])
+        results = []
+        for sym in tickers[:15]:
+            try:
+                sym_norm = stock_service.normalize_ticker(sym)
+                prof = stock_service.get_stock_profile(sym_norm)
+                results.append({
+                    "symbol": sym_norm,
+                    "name": prof["name"],
+                    "price": prof["current_price"],
+                    "change": prof["change"],
+                    "change_percent": prof["change_percent"],
+                    "currency_symbol": prof["currency_symbol"]
+                })
+            except Exception:
+                continue
+        return jsonify({"watchlist": results})
 
     # 📌 Backward Compatibility Routes
     @app.route("/indian")
@@ -207,6 +304,14 @@ def create_app():
         return jsonify(profile)
 
     # 📌 Global Error Handlers
+    @app.errorhandler(429)
+    def rate_limit_error(error):
+        return render_template(
+            "error.html",
+            error_title="429 - Rate Limit Cooldown",
+            error_message="To ensure fair compute allocation across all users, ML prediction requests are capped at 15 per minute. Please pause for a few seconds before generating another forecast."
+        ), 429
+
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template(
@@ -226,14 +331,12 @@ def create_app():
     return app
 
 # WSGI Entry Application Instance
-import numpy as np  # Needed for NaN handling in stock_detail
 app = create_app()
 
 if __name__ == "__main__":
-    # Create necessary directories
     os.makedirs(Config.DATA_DIR, exist_ok=True)
     os.makedirs(Config.MODELS_DIR, exist_ok=True)
     
     port = int(os.environ.get("PORT", 5001))
-    print(f"🚀 AlphaPulse AI Production Server running on http://127.0.0.1:{port}")
+    logger.info(f"🚀 AlphaPulse AI Production Server running on http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)

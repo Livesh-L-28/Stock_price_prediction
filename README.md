@@ -9,11 +9,11 @@
   <img src="https://img.shields.io/badge/Keras-3.15-D00000?style=for-the-badge&logo=keras&logoColor=white" alt="Keras" />
   <img src="https://img.shields.io/badge/Plotly-2.35-3F4F75?style=for-the-badge&logo=plotly&logoColor=white" alt="Plotly" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
-  <img src="https://img.shields.io/badge/Tests-8%20Passed-10B981?style=for-the-badge&logo=pytest&logoColor=white" alt="Pytest" />
+  <img src="https://img.shields.io/badge/Tests-13%20Passed-10B981?style=for-the-badge&logo=pytest&logoColor=white" alt="Pytest" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" />
 </p>
 
-### 🚀 Production-Grade Real-Time Indian 🇮🇳 (NSE) & US 🇺🇸 (NYSE/NASDAQ) Stock Trend Prediction, Technical Momentum Analytics, and Out-of-Sample LSTM Backtesting
+### 🚀 Production-Grade Real-Time Indian 🇮🇳 (NSE) & US 🇺🇸 (NYSE/NASDAQ) Stock Trend Prediction, Multivariate LSTM Modeling, News Sentiment Analytics, and Out-of-Sample Backtesting
 
 ---
 
@@ -21,15 +21,19 @@
 
 ## 🌟 Key Production Features
 
-- **🧠 Stacked LSTM Neural Architecture**: 60-day historical sequence memory with dropout regularization, input layer standardization, and dense forecast projections.
-- **⚡ Persistent Model Checkpointing**: Pretrained models are saved as native binary artifacts (`models/*.keras`). Cached models serve sub-second inferences without re-training overhead.
+- **🧠 Multivariate Stacked LSTM Network**: 60-day sequence memory trained on 5 financial dimensions: `[Close, Volume, RSI_14, MACD, Spread]` with dual normalizers and hybrid trend anchoring.
+- **📰 Real-Time Financial News & Sentiment Analysis**: Real-time headline scraping via Yahoo Finance with rule-based financial domain polarity scoring (`BULLISH` / `BEARISH` / `NEUTRAL` percentages).
+- **⭐ Client-Side Interactive Watchlist**: Monitor favorite stocks across sessions via persistent `localStorage` with live batch quote polling.
+- **📥 One-Click CSV Analytics Export**: Download complete 1-year historical OHLCV data with all computed moving averages and technical indicators (`/stock/<ticker>/export-csv`).
+- **🛡️ Production API Rate Limiting**: Secured with `Flask-Limiter` (15 requests/minute for ML forecasts) to safeguard server CPU and prevent compute exhaustion.
+- **⚡ Persistent Model Checkpointing**: Pretrained models saved as native binary artifacts (`models/*.keras`) for sub-second cached inference.
 - **📊 Real Out-of-Sample Backtesting**: Displays concrete generalization metrics:
   - **RMSE** (Root Mean Squared Error)
   - **MAE** (Mean Absolute Error)
   - **MAPE** (Mean Absolute Percentage Error)
   - **Directional Accuracy %** (Daily Up/Down prediction accuracy)
 - **📈 Interactive Plotly Financial Charts**:
-  - Full OHLC Candlestick charts with 20-day & 50-day Simple Moving Average (SMA) overlays.
+  - Full OHLC Candlestick & Area charts with 20-day & 50-day Simple Moving Average (SMA) overlays.
   - Subplot volume analytics with bullish/bearish color coding.
   - Auto-regressive forecast line accompanied by a **95% dynamic confidence interval cone**.
 - **🎯 Comprehensive Technical Indicators**:
@@ -38,7 +42,7 @@
   - **Bollinger Bands** (20-day mean ± 2 standard deviations).
   - 30-Day Annualized Historical Volatility.
 - **🇮🇳 & 🇺🇸 Curated Global Blue-Chips**: 50 Top Indian Blue-chips (`RELIANCE.NS`, `TCS.NS`, `HDFCBANK.NS`, `INFY.NS`, etc.) and 50 US Tech/Industrial Leaders (`AAPL`, `NVDA`, `MSFT`, `GOOGL`, `TSLA`, etc.).
-- **🔍 Instant Autocomplete Search API**: Real-time ticker search and smart ticker auto-normalization (e.g. typing `reliance` auto-maps to `RELIANCE.NS` with Indian Rupee `₹` formatting).
+- **🔍 Instant Autocomplete Search API**: Real-time ticker search and smart ticker auto-normalization.
 - **🌐 Real-Time Market Session Tracker**: Live ribbon tracking trading hours and open/closed status for NSE (India) and NYSE/NASDAQ (US).
 - **🐳 Enterprise Containerization**: Dockerfile with multi-worker Gunicorn WSGI configuration and Docker Compose setup.
 

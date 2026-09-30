@@ -1,7 +1,8 @@
-# Core Web Framework
+# Core Web Framework & Security
 Flask>=3.1.0
 Werkzeug>=3.1.0
 gunicorn>=22.0.0
+flask-limiter>=3.8.0
 
 # Financial Data & Market Ingestion
 yfinance>=0.2.50

@@ -1,6 +1,8 @@
 import pytest
+import pandas as pd
+import numpy as np
 from app import create_app
-from services import stock_service, market_service
+from services import stock_service, market_service, news_service, ml_service
 
 @pytest.fixture
 def client():
@@ -59,3 +61,50 @@ def test_legacy_routes_redirect(client):
     res = client.get("/indian")
     assert res.status_code == 302
     assert "/market/india" in res.headers["Location"]
+
+def test_health_check(client):
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.get_json()["status"] == "healthy"
+
+def test_news_sentiment():
+    bull_res = news_service._calculate_headline_sentiment("NVIDIA Surges to Record Highs with Strong Profit Growth")
+    assert bull_res["label"] == "BULLISH"
+    assert bull_res["score"] > 0
+
+    bear_res = news_service._calculate_headline_sentiment("Stock Plunges amid Lawsuit and Revenue Miss")
+    assert bear_res["label"] == "BEARISH"
+    assert bear_res["score"] < 0
+
+def test_multivariate_feature_extraction():
+    # Synthetic dataframe
+    dates = pd.date_range("2025-01-01", periods=100)
+    df = pd.DataFrame({
+        "Open": np.linspace(100, 150, 100),
+        "High": np.linspace(102, 153, 100),
+        "Low": np.linspace(98, 148, 100),
+        "Close": np.linspace(101, 151, 100),
+        "Volume": np.random.randint(1000, 5000, 100)
+    }, index=dates)
+
+    feat_df = ml_service.extract_multivariate_features(df)
+    assert "Close" in feat_df.columns
+    assert "Volume" in feat_df.columns
+    assert "RSI_14" in feat_df.columns
+    assert "MACD" in feat_df.columns
+    assert "Spread" in feat_df.columns
+    assert len(feat_df.columns) == 5
+
+def test_csv_export(client):
+    res = client.get("/stock/AAPL/export-csv")
+    assert res.status_code == 200
+    assert "text/csv" in res.headers["Content-Type"]
+    assert b"Date,Open,High,Low,Close,Volume" in res.data
+
+def test_watchlist_quotes_api(client):
+    res = client.post("/api/watchlist/quotes", json={"tickers": ["AAPL"]})
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "watchlist" in data
+    assert len(data["watchlist"]) > 0
+    assert data["watchlist"][0]["symbol"] == "AAPL"

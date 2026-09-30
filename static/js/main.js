@@ -1,13 +1,17 @@
 // ==========================================================================
 // AlphaPulse AI — Production Financial Terminal JavaScript
+// Features: Instant Search, Plotly Charts, Watchlist, Real-Time Progress
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
     initSearchAutocomplete();
     initPredictionLoading();
+    syncWatchlistBadge();
 });
 
-// Instant Real-Time Search Autocomplete
+// ==========================================================================
+// 1. Instant Real-Time Search Autocomplete
+// ==========================================================================
 function initSearchAutocomplete() {
     const searchInput = document.getElementById('globalSearchInput');
     const dropdown = document.getElementById('searchResultsDropdown');
@@ -55,14 +59,12 @@ function initSearchAutocomplete() {
         }, 150);
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
             dropdown.style.display = 'none';
         }
     });
 
-    // Enter key navigation to custom ticker
     searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -74,20 +76,195 @@ function initSearchAutocomplete() {
     });
 }
 
-// Show Neural Loading Overlay on Form Submit
+// ==========================================================================
+// 2. Training Progress Polling & Loading Overlay
+// ==========================================================================
 function initPredictionLoading() {
     const predictForms = document.querySelectorAll('.predict-form');
     const overlay = document.getElementById('loadingOverlay');
     if (!overlay) return;
 
     predictForms.forEach(form => {
-        form.addEventListener('submit', () => {
+        form.addEventListener('submit', (e) => {
             overlay.style.display = 'flex';
+            
+            // Extract ticker from form to poll progress
+            const tickerInput = form.querySelector('input[name="ticker"]');
+            const ticker = tickerInput ? tickerInput.value.trim().toUpperCase() : '';
+
+            if (ticker) {
+                pollTrainingProgress(ticker);
+            }
         });
     });
 }
 
-// Plotly Financial Chart for Stock Detail Page (Candlestick / Area + Volume + Moving Averages)
+function pollTrainingProgress(ticker) {
+    const pollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/train-progress/${encodeURIComponent(ticker)}`);
+            const data = await res.json();
+            
+            if (data.status === 'training') {
+                const header = document.querySelector('#loadingOverlay h4');
+                if (header) {
+                    header.innerText = `Training LSTM Network (Epoch ${data.epoch}/${data.total_epochs} — ${data.progress_pct}%)`;
+                }
+            } else if (data.status === 'completed') {
+                const header = document.querySelector('#loadingOverlay h4');
+                if (header) {
+                    header.innerText = `Forecasting Future Trajectory...`;
+                }
+                clearInterval(pollInterval);
+            }
+        } catch (err) {
+            // Ignore polling errors
+        }
+    }, 800);
+}
+
+// ==========================================================================
+// 3. Browser Watchlist (localStorage + Live Batch Quotes)
+// ==========================================================================
+function getWatchlist() {
+    try {
+        return JSON.parse(localStorage.getItem('alphapulse_watchlist')) || ['AAPL', 'RELIANCE.NS', 'NVDA'];
+    } catch {
+        return ['AAPL', 'RELIANCE.NS'];
+    }
+}
+
+function saveWatchlist(list) {
+    localStorage.setItem('alphapulse_watchlist', JSON.stringify(list));
+    syncWatchlistBadge();
+}
+
+function syncWatchlistBadge() {
+    const badge = document.getElementById('watchlistCount');
+    if (badge) {
+        badge.innerText = getWatchlist().length;
+    }
+}
+
+function toggleWatchlist(sym) {
+    let list = getWatchlist();
+    sym = sym.toUpperCase().trim();
+    if (list.includes(sym)) {
+        list = list.filter(item => item !== sym);
+    } else {
+        list.push(sym);
+    }
+    saveWatchlist(list);
+    updateWatchlistButtonState(sym);
+}
+
+function updateWatchlistButtonState(sym) {
+    const btn = document.getElementById('watchlistToggleBtn');
+    if (!btn) return;
+    const list = getWatchlist();
+    const isSaved = list.includes(sym.toUpperCase().trim());
+    
+    if (isSaved) {
+        btn.innerHTML = `<i class="bi bi-star-fill text-warning"></i> <span class="text-warning">Saved</span>`;
+        btn.classList.add('border-warning');
+    } else {
+        btn.innerHTML = `<i class="bi bi-star"></i> <span>Watchlist</span>`;
+        btn.classList.remove('border-warning');
+    }
+}
+
+async function openWatchlistModal() {
+    const modalEl = document.getElementById('watchlistModal');
+    const container = document.getElementById('watchlistContent');
+    if (!modalEl || !container) return;
+
+    const list = getWatchlist();
+    
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="bi bi-star text-muted fs-1 mb-2"></i>
+                <h6 class="text-white fw-bold">Your Watchlist is Empty</h6>
+                <p class="text-muted small">Click "Watchlist" on any stock detail page to monitor its live performance.</p>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                <div class="text-muted small">Fetching real-time quotes for monitored assets...</div>
+            </div>
+        `;
+
+        try {
+            const res = await fetch('/api/watchlist/quotes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tickers: list })
+            });
+            const data = await res.json();
+            
+            if (data.watchlist && data.watchlist.length > 0) {
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover small mb-0">
+                            <thead>
+                                <tr class="text-muted border-bottom border-secondary border-opacity-25">
+                                    <th>Asset</th>
+                                    <th>Company</th>
+                                    <th class="text-end">Spot Price</th>
+                                    <th class="text-end">24h Change</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.watchlist.map(item => `
+                                    <tr class="align-middle">
+                                        <td>
+                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="text-white fw-bold mono text-decoration-none">
+                                                ${item.symbol}
+                                            </a>
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 180px;">${item.name}</td>
+                                        <td class="text-end mono fw-bold text-white">${item.currency_symbol}${item.price}</td>
+                                        <td class="text-end mono fw-bold ${item.change >= 0 ? 'price-up' : 'price-down'}">
+                                            ${item.change >= 0 ? '+' : ''}${item.change} (${item.change >= 0 ? '+' : ''}${item.change_percent}%)
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="/stock/${encodeURIComponent(item.symbol)}" class="btn btn-sm btn-ghost py-1 px-2 me-1" title="View Chart">
+                                                <i class="bi bi-graph-up"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-ghost text-danger py-1 px-2" onclick="removeFromWatchlist('${item.symbol}')" title="Remove">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-danger small">Could not retrieve quotes. Please check network connection.</p>`;
+            }
+        } catch (err) {
+            container.innerHTML = `<p class="text-danger small">Error loading watchlist: ${err.message}</p>`;
+        }
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function removeFromWatchlist(sym) {
+    let list = getWatchlist().filter(item => item !== sym);
+    saveWatchlist(list);
+    openWatchlistModal();
+}
+
+// ==========================================================================
+// 4. Plotly Financial Chart for Stock Detail Page
+// ==========================================================================
 function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode = 'candlestick') {
     if (!window.Plotly || !chartPayload) return;
 
@@ -207,7 +384,9 @@ function renderStockDetailChart(containerId, chartPayload, currencySymbol, mode 
     Plotly.newPlot(containerId, [mainTrace, sma20Trace, sma50Trace, volumeTrace], layout, config);
 }
 
-// Plotly Forecast Chart for Prediction Page (Historical + Test Fit + AI Forecast + 95% Confidence Cone)
+// ==========================================================================
+// 5. Plotly Forecast Chart for Prediction Page
+// ==========================================================================
 function renderPredictionChart(containerId, payload, currencySymbol) {
     if (!window.Plotly || !payload) return;
 
@@ -259,7 +438,6 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
     }
 
     // 4. Future Forecast Line
-    // Connect smoothly to the last historical price
     const forecastDates = [payload.history_dates[payload.history_dates.length - 1], ...payload.future_dates];
     const forecastPrices = [payload.history_prices[payload.history_prices.length - 1], ...payload.future_prices];
 
