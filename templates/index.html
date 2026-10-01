@@ -1,299 +1,298 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | AlphaPulse AI Stock Intelligence{% endblock %}
+{% block title %}Live Market News & Sentiment Terminal | AlphaPulse AI{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    
-    <!-- Hero & Quick Prediction Row -->
-    <div class="row align-items-center g-5 mb-5 pb-3">
-        <!-- Hero Left Column -->
-        <div class="col-lg-7">
-            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3 hero-chip">
-                <i class="bi bi-stars text-primary"></i>
-                <span class="small fw-semibold text-primary">Deep Learning Time-Series Forecaster</span>
+<div class="container-xl py-4" id="newsSectionRoot">
+
+    <!-- Top News Dashboard Command Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4 pb-2 border-bottom">
+        <div>
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.2);">
+                <span class="live-beacon"></span>
+                <span class="text-danger fw-bold mono small" style="font-size: 0.72rem; letter-spacing: 0.05em;">REAL-TIME FINANCIAL WIRE</span>
             </div>
-            
-            <h1 class="display-5 fw-bold mb-3 hero-heading">
-                Quantitative Stock Intelligence Powered by <span class="gradient-text">Stacked LSTM</span>
+            <h1 class="display-6 fw-bold mb-1 d-flex align-items-center gap-2">
+                <span>Live Market News &amp; Sentiment Radar</span>
             </h1>
-            
-            <p class="text-secondary lead mb-4" style="font-size: 1.08rem; max-width: 580px;">
-                Analyze high-frequency price action, track momentum indicators (RSI, MACD, Bollinger Bands), and project future trends with empirical out-of-sample backtesting and 95% statistical confidence cones.
+            <p class="text-secondary small mb-0" style="max-width: 780px;">
+                High-frequency financial reporting, institutional filings, earnings catalysts, and algorithmic headline polarity intelligence across Indian &amp; US equities.
             </p>
-
-            <!-- Quick Metrics Strip -->
-            <div class="row g-3 mb-4" style="max-width: 540px;">
-                <div class="col-4">
-                    <div class="metric-card p-2 text-center">
-                        <div class="metric-label" style="font-size: 0.7rem;">Time Window</div>
-                        <div class="fw-bold mono metric-val" style="font-size: 1.05rem;">60 Days</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="metric-card p-2 text-center">
-                        <div class="metric-label" style="font-size: 0.7rem;">Neural Engine</div>
-                        <div class="text-primary fw-bold mono" style="font-size: 1.05rem;">2x LSTM</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="metric-card p-2 text-center">
-                        <div class="metric-label" style="font-size: 0.7rem;">Inference Time</div>
-                        <div class="text-success fw-bold mono" style="font-size: 1.05rem;">&lt; 100ms</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex flex-wrap gap-3">
-                <a href="/market/india" class="btn-primary-gradient">
-                    <span>🇮🇳 Explore Indian NSE Stocks</span>
-                    <i class="bi bi-arrow-right"></i>
-                </a>
-                <a href="/market/us" class="btn-secondary-glass">
-                    <span>🇺🇸 Explore US Equities</span>
-                </a>
-            </div>
         </div>
 
-        <!-- Quick Prediction Card (Right Column) -->
-        <div class="col-lg-5">
-            <div class="terminal-card card-highlight p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="p-2 rounded-3 terminal-icon-box text-warning">
-                            <i class="bi bi-lightning-charge-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-0">Quick AI Forecast</h5>
-                            <span class="text-muted small">Deep Learning Prediction</span>
-                        </div>
-                    </div>
-                    <span class="badge badge-neural mono small px-2 py-1">LSTM-v2</span>
-                </div>
-                
-                <form action="/predict" method="POST" class="predict-form" id="heroPredictForm">
-                    <!-- Stock Symbol Input -->
-                    <div class="mb-3">
-                        <label class="form-label text-secondary small fw-semibold d-flex justify-content-between">
-                            <span>Ticker Symbol or Company</span>
-                            <span class="text-muted small">NSE or US</span>
-                        </label>
-                        <div class="input-group">
-                            <span class="input-group-text terminal-input-addon mono">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input list="stockDatalist" id="heroTickerInput" name="ticker" class="form-control terminal-input mono fw-semibold" placeholder="e.g. RELIANCE, AAPL, NVDA" required>
-                            <datalist id="stockDatalist">
-                                {% for s in featured_indian %}
-                                <option value="{{ s.symbol }}">{{ s.name }} (NSE India)</option>
-                                {% endfor %}
-                                {% for s in featured_us %}
-                                <option value="{{ s.symbol }}">{{ s.name }} (US Market)</option>
-                                {% endfor %}
-                            </datalist>
-                        </div>
-
-                        <!-- Quick suggestion chips -->
-                        <div class="d-flex flex-wrap gap-1 mt-2">
-                            <span class="quick-chip" onclick="setTicker('RELIANCE.NS')">RELIANCE</span>
-                            <span class="quick-chip" onclick="setTicker('TCS.NS')">TCS</span>
-                            <span class="quick-chip" onclick="setTicker('HDFCBANK.NS')">HDFCBANK</span>
-                            <span class="quick-chip" onclick="setTicker('AAPL')">AAPL</span>
-                            <span class="quick-chip" onclick="setTicker('NVDA')">NVDA</span>
-                            <span class="quick-chip" onclick="setTicker('TSLA')">TSLA</span>
-                        </div>
-                    </div>
-
-                    <!-- Horizon Selection with Visual Pills -->
-                    <div class="mb-4">
-                        <label class="form-label text-secondary small fw-semibold d-flex justify-content-between">
-                            <span>Forecast Horizon</span>
-                            <span class="mono fw-bold text-primary" id="horizonDisplay">30 Business Days</span>
-                        </label>
-                        
-                        <!-- Hidden input for form submission -->
-                        <input type="hidden" name="days" id="selectedDaysInput" value="30">
-                        
-                        <!-- Interactive Pill Buttons -->
-                        <div class="horizon-pills">
-                            <div class="horizon-pill-btn" onclick="selectHorizon(7)">7d</div>
-                            <div class="horizon-pill-btn" onclick="selectHorizon(14)">14d</div>
-                            <div class="horizon-pill-btn active" onclick="selectHorizon(30)">30d</div>
-                            <div class="horizon-pill-btn" onclick="selectHorizon(60)">60d</div>
-                            <div class="horizon-pill-btn" onclick="selectHorizon(90)">90d</div>
-                        </div>
-                    </div>
-
-                    <!-- Retrain Checkbox -->
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" name="force_retrain" id="retrainToggleHero" value="true">
-                        <label class="form-check-label text-muted small" for="retrainToggleHero">
-                            Force neural network re-training (re-fits fresh weights)
-                        </label>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn-primary-gradient w-100 justify-content-center py-2 fs-6">
-                        <i class="bi bi-cpu-fill"></i> Execute AI Price Forecast
-                    </button>
-                </form>
+        <!-- Real-time Controls & Status -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="live-pulse-container" id="newsLiveStatusBadge">
+                <span class="live-beacon"></span>
+                <span class="text-success fw-bold mono" style="font-size: 0.72rem;">LIVE STREAM</span>
+                <span class="text-muted ms-1 small" id="newsLastUpdated">Updated {{ market_news.last_updated if market_news else 'just now' }}</span>
             </div>
+
+            <button class="btn-pill-action" id="autoRefreshToggleBtn" onclick="toggleAutoRefresh()" title="Toggle auto-refresh interval (60s)">
+                <i class="bi bi-arrow-repeat text-primary" id="autoRefreshIcon"></i>
+                <span id="autoRefreshLabel">Auto-refresh (60s)</span>
+            </button>
+
+            <button class="btn-pill-action" id="newsRefreshBtn" onclick="refreshLiveNews()" title="Fetch latest headlines">
+                <i class="bi bi-arrow-clockwise" id="newsRefreshIcon"></i>
+                <span>Refresh Now</span>
+            </button>
         </div>
     </div>
 
-    <!-- Featured Indian Stocks Section -->
-    <div class="mb-5 pb-2">
-        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
-            <div>
-                <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
-                    <span>🇮🇳 Key Indian Market Bluechips (NSE)</span>
-                </h4>
-                <p class="text-secondary small mb-0">High-volume benchmark leaders pre-indexed for instant forecasting</p>
+    <!-- Institutional Sentiment Pulse Bar Card -->
+    {% set s_summary = market_news.sentiment_summary if market_news and market_news.sentiment_summary else {} %}
+    <div class="news-sentiment-bar-card mb-4" id="newsSentimentCard">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-semibold text-secondary">Market Sentiment Radar:</span>
+                <span class="{{ s_summary.badge_class or 'badge-neutral-subtle' }}" id="newsMoodBadge">
+                    <i class="bi {{ s_summary.icon or 'bi-dash-lg' }} me-1" id="newsMoodIcon"></i>
+                    <span id="newsMoodText">{{ s_summary.label or 'Neutral / Balanced' }}</span>
+                </span>
+                <span class="badge bg-secondary bg-opacity-10 text-secondary mono small ms-1" id="newsArticleCountBadge">
+                    {{ market_news.total_articles or (market_news.articles|length if market_news and market_news.articles else 0) }} Stories Indexed
+                </span>
             </div>
-            <a href="/market/india" class="btn-pill-action">
-                <span>View Full 50 Catalog</span>
-                <i class="bi bi-arrow-right"></i>
-            </a>
+
+            <div class="d-flex align-items-center gap-3 small mono" style="font-size: 0.78rem;">
+                <div>
+                    <span class="text-success fw-bold">●</span> <span id="newsBullishCount">{{ s_summary.bullish_count or 0 }}</span> Bullish (<span id="newsBullishPct">{{ s_summary.bullish_pct or 0 }}%</span>)
+                </div>
+                <div>
+                    <span class="text-muted fw-bold">●</span> <span id="newsNeutralCount">{{ s_summary.neutral_count or 0 }}</span> Neutral (<span id="newsNeutralPct">{{ s_summary.neutral_pct or 0 }}%</span>)
+                </div>
+                <div>
+                    <span class="text-danger fw-bold">●</span> <span id="newsBearishCount">{{ s_summary.bearish_count or 0 }}</span> Bearish (<span id="newsBearishPct">{{ s_summary.bearish_pct or 0 }}%</span>)
+                </div>
+            </div>
         </div>
 
-        <div class="row g-3">
-            {% for stock in featured_indian[:8] %}
-            <div class="col-xl-3 col-lg-4 col-sm-6">
-                <div class="terminal-card p-3 h-100 d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge terminal-badge mono px-2 py-1">
-                                {{ stock.symbol }}
-                            </span>
-                            <span class="badge badge-sector small">
-                                {{ stock.sector }}
-                            </span>
+        <!-- Segmented Gauge Track -->
+        <div class="sentiment-meter-track">
+            <div class="sentiment-meter-fill-bullish" id="sentimentBarBullish" style="width: {{ s_summary.bullish_pct or 33.3 }}%;"></div>
+            <div class="sentiment-meter-fill-neutral" id="sentimentBarNeutral" style="width: {{ s_summary.neutral_pct or 33.3 }}%;"></div>
+            <div class="sentiment-meter-fill-bearish" id="sentimentBarBearish" style="width: {{ s_summary.bearish_pct or 33.3 }}%;"></div>
+        </div>
+    </div>
+
+    <!-- News Toolbar: Categories & Search Filter -->
+    <div class="news-toolbar mb-4">
+        <div class="news-category-pills" id="newsCategoryPills">
+            <button class="news-cat-btn active" data-cat="all" onclick="switchNewsCategory('all')">
+                <i class="bi bi-globe2"></i> All Markets
+            </button>
+            <button class="news-cat-btn" data-cat="india" onclick="switchNewsCategory('india')">
+                <span>🇮🇳</span> Indian Bluechips (NSE)
+            </button>
+            <button class="news-cat-btn" data-cat="us" onclick="switchNewsCategory('us')">
+                <span>🇺🇸</span> US Equities
+            </button>
+            <button class="news-cat-btn" data-cat="tech" onclick="switchNewsCategory('tech')">
+                <i class="bi bi-cpu"></i> Tech &amp; AI
+            </button>
+            <button class="news-cat-btn" data-sentiment="BULLISH" onclick="filterBySentiment('BULLISH')">
+                <i class="bi bi-graph-up-arrow text-success"></i> Bullish
+            </button>
+            <button class="news-cat-btn" data-sentiment="BEARISH" onclick="filterBySentiment('BEARISH')">
+                <i class="bi bi-graph-down-arrow text-danger"></i> Bearish
+            </button>
+        </div>
+
+        <!-- Instant Search Input -->
+        <div class="news-search-wrapper">
+            <i class="bi bi-search news-search-icon"></i>
+            <input type="text" id="newsSearchInput" placeholder="Filter headlines by company, ticker, or source..." oninput="handleNewsSearch(this.value)">
+            <button class="news-search-clear" id="newsSearchClear" onclick="clearNewsSearch()" title="Clear filter">
+                <i class="bi bi-x-circle-fill"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- News Articles Content Container (Spotlight Showcase + Grid) -->
+    <div id="newsArticlesContainer">
+        {% if market_news and market_news.articles and market_news.articles|length > 0 %}
+            {% set spotlight = market_news.articles[0] %}
+            {% set trending = market_news.articles[1:4] %}
+            {% set secondary = market_news.articles[4:] %}
+
+            <!-- Top Stories Showcase Row (Lead Spotlight + Trending Sidebar) -->
+            <div class="row g-4 mb-4">
+                <!-- Lead Spotlight Story (Col 8) -->
+                <div class="col-lg-8">
+                    <div class="news-spotlight-card h-100 d-flex flex-column justify-content-between" id="leadSpotlightCard">
+                        <div class="news-spotlight-img-wrap" style="min-height: 280px; max-height: 340px;">
+                            {% if spotlight.thumbnail %}
+                            <img src="{{ spotlight.thumbnail }}" alt="{{ spotlight.title }}" class="news-spotlight-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'news-fallback-placeholder\'><i class=\'bi bi-newspaper\'></i></div>';">
+                            {% else %}
+                            <div class="news-fallback-placeholder">
+                                <i class="bi bi-newspaper"></i>
+                            </div>
+                            {% endif %}
+                            <div class="news-spotlight-badge-float d-flex gap-2">
+                                <span class="badge bg-dark bg-opacity-75 text-light px-2 py-1 backdrop-blur small">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> TOP STORY
+                                </span>
+                                <span class="{{ spotlight.sentiment.badge_class }} px-2 py-1">
+                                    <i class="bi {{ spotlight.sentiment.icon }} me-1"></i>{{ spotlight.sentiment.label }}
+                                </span>
+                            </div>
                         </div>
-                        <h6 class="fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
-                    </div>
-                    
-                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
-                        <a href="/stock/{{ stock.symbol }}" class="btn-pill-action flex-grow-1 justify-content-center">
-                            <i class="bi bi-graph-up"></i> Analysis
-                        </a>
-                        <form action="/predict" method="POST" class="predict-form flex-grow-1">
-                            <input type="hidden" name="ticker" value="{{ stock.symbol }}">
-                            <input type="hidden" name="days" value="30">
-                            <button type="submit" class="btn-pill-action w-100 justify-content-center btn-pill-action-primary">
-                                <i class="bi bi-cpu"></i> Predict
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Featured US Tech Leaders Section -->
-    <div class="mb-5 pb-2">
-        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
-            <div>
-                <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
-                    <span>🇺🇸 US Mega-Cap Leaders (NYSE / NASDAQ)</span>
-                </h4>
-                <p class="text-secondary small mb-0">Global technology and semiconductor leaders</p>
-            </div>
-            <a href="/market/us" class="btn-pill-action">
-                <span>View Full 50 Catalog</span>
-                <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-
-        <div class="row g-3">
-            {% for stock in featured_us[:8] %}
-            <div class="col-xl-3 col-lg-4 col-sm-6">
-                <div class="terminal-card p-3 h-100 d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge terminal-badge mono px-2 py-1">
-                                {{ stock.symbol }}
-                            </span>
-                            <span class="badge badge-sector small">
-                                {{ stock.sector }}
-                            </span>
+                        <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="news-publisher-tag">{{ spotlight.publisher }} • {{ spotlight.time_ago }}</span>
+                                    <span class="badge bg-secondary bg-opacity-25 text-secondary small">{{ spotlight.category }}</span>
+                                </div>
+                                <h3 class="fw-bold mb-2 fs-5">
+                                    <a href="{{ spotlight.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                                        {{ spotlight.title }}
+                                    </a>
+                                </h3>
+                                <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                                    {{ spotlight.summary or 'Institutional market report on financial developments, macroeconomic trends, and equity earnings catalysts.' }}
+                                </p>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3 border-top">
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if spotlight.symbol and spotlight.symbol != 'GSPC' and spotlight.symbol != 'IXIC' %}
+                                    <a href="/stock/{{ spotlight.symbol }}" class="news-ticker-link" title="Open {{ spotlight.symbol }} Technicals & Forecast">
+                                        <i class="bi bi-graph-up text-primary me-1"></i> {{ spotlight.symbol }}
+                                    </a>
+                                    {% endif %}
+                                    <span class="text-muted small"><i class="bi bi-shield-check text-success me-1"></i> Verified Wire</span>
+                                </div>
+                                <a href="{{ spotlight.url }}" target="_blank" rel="noopener noreferrer" class="news-read-link">
+                                    Read Full Story <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
                         </div>
-                        <h6 class="fw-bold mb-1 text-truncate" title="{{ stock.name }}">{{ stock.name }}</h6>
                     </div>
-                    
-                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
-                        <a href="/stock/{{ stock.symbol }}" class="btn-pill-action flex-grow-1 justify-content-center">
-                            <i class="bi bi-graph-up"></i> Analysis
-                        </a>
-                        <form action="/predict" method="POST" class="predict-form flex-grow-1">
-                            <input type="hidden" name="ticker" value="{{ stock.symbol }}">
-                            <input type="hidden" name="days" value="30">
-                            <button type="submit" class="btn-pill-action w-100 justify-content-center btn-pill-action-primary">
-                                <i class="bi bi-cpu"></i> Predict
-                            </button>
-                        </form>
+                </div>
+
+                <!-- Trending Market Highlights Column (Col 4) -->
+                <div class="col-lg-4">
+                    <div class="d-flex flex-column gap-3 h-100 justify-content-between">
+                        <div class="d-flex align-items-center gap-2 px-1">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i>
+                            <h6 class="fw-bold mb-0 text-uppercase small text-muted" style="letter-spacing: 0.05em;">Market Catalysts</h6>
+                        </div>
+
+                        {% for tr in trending %}
+                        <div class="terminal-card p-3 d-flex flex-column justify-content-between flex-grow-1">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="news-publisher-tag text-truncate" style="max-width: 140px;">{{ tr.publisher }}</span>
+                                    <span class="{{ tr.sentiment.badge_class }}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">
+                                        {{ tr.sentiment.label }}
+                                    </span>
+                                </div>
+                                <h6 class="fw-bold mb-1" style="font-size: 0.88rem; line-height: 1.4;">
+                                    <a href="{{ tr.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                                        {{ tr.title }}
+                                    </a>
+                                </h6>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top" style="font-size: 0.75rem;">
+                                <span class="text-muted small">{{ tr.time_ago }}</span>
+                                <a href="{{ tr.url }}" target="_blank" rel="noopener noreferrer" class="news-read-link" style="font-size: 0.75rem;">
+                                    Read <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
-            {% endfor %}
+
+            <!-- Secondary Stories Grid (3 Columns) -->
+            {% if secondary|length > 0 %}
+            <div class="row g-3" id="secondaryNewsGrid">
+                {% for item in secondary %}
+                <div class="col-lg-4 col-md-6 news-card-col" data-title="{{ item.title|lower }}" data-publisher="{{ item.publisher|lower }}" data-sentiment="{{ item.sentiment.label }}">
+                    <div class="news-grid-card">
+                        <div class="news-card-img-wrap">
+                            {% if item.thumbnail %}
+                            <img src="{{ item.thumbnail }}" alt="{{ item.title }}" class="news-card-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'news-fallback-placeholder\'><i class=\'bi bi-newspaper\'></i></div>';">
+                            {% else %}
+                            <div class="news-fallback-placeholder">
+                                <i class="bi bi-newspaper"></i>
+                            </div>
+                            {% endif %}
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="{{ item.sentiment.badge_class }}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                                    <i class="bi {{ item.sentiment.icon }} me-1"></i>{{ item.sentiment.label }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="p-3 d-flex flex-column justify-content-between flex-grow-1">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="news-publisher-tag text-truncate" style="max-width: 160px;">{{ item.publisher }}</span>
+                                    <span class="text-muted small" style="font-size: 0.72rem;">{{ item.time_ago }}</span>
+                                </div>
+                                <h6 class="news-card-title" title="{{ item.title }}">
+                                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                                        {{ item.title }}
+                                    </a>
+                                </h6>
+                                {% if item.summary %}
+                                <p class="news-card-summary">
+                                    {{ item.summary }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div class="news-card-footer mt-auto">
+                                <div class="d-flex align-items-center gap-1">
+                                    {% if item.symbol and item.symbol != 'GSPC' and item.symbol != 'IXIC' %}
+                                    <a href="/stock/{{ item.symbol }}" class="news-ticker-link" title="Open {{ item.symbol }} Analysis">
+                                        {{ item.symbol }}
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-secondary bg-opacity-15 text-secondary" style="font-size: 0.68rem;">{{ item.category }}</span>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="news-read-link">
+                                    Read <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="news-empty-state">
+                <i class="bi bi-broadcast text-muted fs-1 mb-2"></i>
+                <h5 class="fw-bold mb-1">Live Financial Wire Standby</h5>
+                <p class="text-muted small mb-3">Connecting to real-time institutional feeds and financial news desks...</p>
+                <button class="btn-primary-gradient px-3 py-2" onclick="refreshLiveNews()">
+                    <i class="bi bi-arrow-clockwise"></i> Fetch Live News
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Infinite Scroll Sentinel & Real-Time Streaming Indicator (Outside newsArticlesContainer to persist across client re-renders) -->
+    <div id="infiniteScrollLoader" class="text-center py-4 my-2" style="display: none;">
+        <div class="d-inline-flex align-items-center gap-3 px-4 py-2 rounded-pill terminal-surface" style="border: 1px solid var(--border-medium); box-shadow: var(--card-shadow);">
+            <div class="spinner-border text-primary spinner-border-sm" role="status">
+                <span class="visually-hidden">Streaming live news...</span>
+            </div>
+            <span class="small fw-semibold text-secondary mono"><i class="bi bi-broadcast text-primary me-1"></i> Streaming more live market stories &amp; corporate wires...</span>
         </div>
     </div>
 
-    <!-- Production Pipeline Architecture Features -->
-    <div class="terminal-card p-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <i class="bi bi-shield-check text-success fs-5"></i>
-            <h5 class="fw-bold mb-0">Production Forecasting Pipeline Standards</h5>
-        </div>
-        <div class="row g-4 text-secondary small">
-            <div class="col-md-3 col-sm-6">
-                <div class="p-3 terminal-metric-card h-100">
-                    <div class="text-primary fw-bold mb-1"><i class="bi bi-layers-fill me-1"></i> Multi-Layer LSTM</div>
-                    <p class="mb-0 text-muted">2-tier stacked LSTM with 50 units each, dropout regularization, and Dense activation layers.</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="p-3 terminal-metric-card h-100">
-                    <div class="text-success fw-bold mb-1"><i class="bi bi-check2-circle me-1"></i> Out-of-Sample Test</div>
-                    <p class="mb-0 text-muted">Held-out test split calculates RMSE, MAE, MAPE, and directional accuracy against live history.</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="p-3 terminal-metric-card h-100">
-                    <div class="text-warning fw-bold mb-1"><i class="bi bi-graph-up me-1"></i> 95% Confidence Cone</div>
-                    <p class="mb-0 text-muted">Empirical residual standard deviations project expanding uncertainty bounds over the forecast.</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="p-3 terminal-metric-card h-100">
-                    <div class="text-primary fw-bold mb-1"><i class="bi bi-hdd-network-fill me-1"></i> Checkpointed Weights</div>
-                    <p class="mb-0 text-muted">Trained weights are cached as native Keras binaries with session memory purging on every request.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Invisible Scroll Sentinel Intersection Target -->
+    <div id="infiniteScrollSentinel" style="height: 40px; margin-top: 10px;"></div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function setTicker(sym) {
-        document.getElementById('heroTickerInput').value = sym;
-    }
-
-    function selectHorizon(days) {
-        document.getElementById('selectedDaysInput').value = days;
-        document.getElementById('horizonDisplay').innerText = days + ' Business Days';
-        
-        // Update pill active classes
-        document.querySelectorAll('.horizon-pill-btn').forEach(btn => {
-            if (btn.innerText === days + 'd') {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-    }
+    window.initialNewsArticles = {{ market_news.articles|tojson if market_news and market_news.articles else '[]' }};
+    window.initialSentimentSummary = {{ market_news.sentiment_summary|tojson if market_news and market_news.sentiment_summary else '{}' }};
 </script>
 {% endblock %}

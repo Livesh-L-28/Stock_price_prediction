@@ -108,3 +108,32 @@ def test_watchlist_quotes_api(client):
     assert "watchlist" in data
     assert len(data["watchlist"]) > 0
     assert data["watchlist"][0]["symbol"] == "AAPL"
+
+def test_market_news_service_aggregation():
+    data = news_service.get_market_news(category="all", limit=5)
+    assert "articles" in data
+    assert "sentiment_summary" in data
+    assert "category" in data
+    assert len(data["articles"]) > 0
+    article = data["articles"][0]
+    assert "title" in article
+    assert "publisher" in article
+    assert "sentiment" in article
+    assert "score" in article["sentiment"]
+    assert "label" in article["sentiment"]
+
+def test_market_news_api_endpoint(client):
+    res = client.get("/api/market-news?category=india&limit=4")
+    assert res.status_code == 200
+    json_data = res.get_json()
+    assert "articles" in json_data
+    assert "sentiment_summary" in json_data
+    assert len(json_data["articles"]) <= 4
+
+def test_dashboard_renders_live_news_section(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    assert b"newsSectionRoot" in res.data
+    assert b"Live Market News &amp; Sentiment Radar" in res.data or b"Live Market News & Sentiment Radar" in res.data
+    assert b"REAL-TIME FINANCIAL WIRE" in res.data
+    assert b"sentiment-meter-track" in res.data

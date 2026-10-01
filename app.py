@@ -46,14 +46,20 @@ def create_app():
     def health_check():
         return jsonify({"status": "healthy", "service": "AlphaPulse AI"}), 200
 
-    # 📌 Home Dashboard
+    # 📌 Home Dashboard (Full-Fledged Live News & Sentiment Terminal)
     @app.route("/")
     def index():
+        try:
+            market_news = news_service.get_market_news(category="all", limit=16)
+        except Exception as e:
+            logger.warning(f"Error fetching initial market news for dashboard: {e}")
+            market_news = {"articles": [], "sentiment_summary": {}}
         return render_template(
             "index.html",
             active_page="home",
             featured_indian=Config.INDIAN_STOCKS,
-            featured_us=Config.US_STOCKS
+            featured_us=Config.US_STOCKS,
+            market_news=market_news
         )
 
     # 📌 Indian Market Explorer
@@ -302,6 +308,38 @@ def create_app():
         ticker = stock_service.normalize_ticker(ticker)
         profile = stock_service.get_stock_profile(ticker)
         return jsonify(profile)
+
+    # 📌 Live Market News Stream & Sentiment API with Infinite Scroll Pagination
+    @app.route("/api/market-news")
+    def api_market_news():
+        category = request.args.get("category", "all")
+        try:
+            offset = max(0, int(request.args.get("offset", 0)))
+        except ValueError:
+            offset = 0
+        try:
+            limit = min(40, max(1, int(request.args.get("limit", 12))))
+        except ValueError:
+            limit = 12
+        force_refresh = request.args.get("refresh", "false").lower() == "true"
+        
+        try:
+            data = news_service.get_market_news(
+                category=category,
+                offset=offset,
+                limit=limit,
+                force_refresh=force_refresh
+            )
+            return jsonify(data)
+        except Exception as e:
+            logger.error(f"Error in api_market_news: {e}")
+            return jsonify({
+                "category": category,
+                "total_articles": 0,
+                "articles": [],
+                "sentiment_summary": {},
+                "error": str(e)
+            }), 500
 
     # 📌 Global Error Handlers
     @app.errorhandler(429)

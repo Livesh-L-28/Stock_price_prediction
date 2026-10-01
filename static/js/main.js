@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchAutocomplete();
     initPredictionLoading();
     syncWatchlistBadge();
+    initLiveNewsDashboard();
 });
 
 // ==========================================================================
@@ -549,3 +550,617 @@ function renderPredictionChart(containerId, payload, currencySymbol) {
     const config = { responsive: true, displayModeBar: true, displaylogo: false };
     Plotly.newPlot(containerId, traces, layout, config);
 }
+
+// ==========================================================================
+// 5. Production Live Market News Wire & Sentiment Radar
+// ==========================================================================
+
+let activeNewsCategory = 'all';
+let activeNewsArticles = [];
+let activeSentimentFilter = null;
+let newsSearchQuery = '';
+let autoRefreshCountdown = 60;
+let isAutoRefreshActive = true;
+let newsCountdownInterval = null;
+let newsOffset = 16;
+let isFetchingMoreNews = false;
+let hasMoreNews = true;
+let infiniteScrollObserver = null;
+let scrollThrottleTimeout = null;
+
+function initLiveNewsDashboard() {
+    const root = document.getElementById('newsSectionRoot');
+    if (!root) return; // Only active on dashboard page
+
+    // Hydrate from SSR payload
+    if (window.initialNewsArticles && Array.isArray(window.initialNewsArticles) && window.initialNewsArticles.length > 0) {
+        activeNewsArticles = window.initialNewsArticles;
+        newsOffset = activeNewsArticles.length;
+    } else {
+        newsOffset = 16;
+    }
+
+    startAutoRefreshCycle();
+    setupInfiniteScroll();
+}
+
+function startAutoRefreshCycle() {
+    clearInterval(newsCountdownInterval);
+    autoRefreshCountdown = 60;
+    updateCountdownUI();
+
+    newsCountdownInterval = setInterval(() => {
+        if (!isAutoRefreshActive) return;
+        autoRefreshCountdown--;
+        if (autoRefreshCountdown <= 0) {
+            autoRefreshCountdown = 60;
+            refreshLiveNews(true); // background silent refresh
+        }
+        updateCountdownUI();
+    }, 1000);
+}
+
+function updateCountdownUI() {
+    const label = document.getElementById('autoRefreshLabel');
+    if (!label) return;
+    if (isAutoRefreshActive) {
+        label.innerText = `Auto-refresh (${autoRefreshCountdown}s)`;
+    } else {
+        label.innerText = 'Auto-refresh: Paused';
+    }
+}
+
+function toggleAutoRefresh() {
+    isAutoRefreshActive = !isAutoRefreshActive;
+    const btn = document.getElementById('autoRefreshToggleBtn');
+    const icon = document.getElementById('autoRefreshIcon');
+    if (!btn || !icon) return;
+
+    if (isAutoRefreshActive) {
+        autoRefreshCountdown = 60;
+        icon.className = 'bi bi-arrow-repeat text-primary';
+        btn.classList.remove('opacity-75');
+    } else {
+        icon.className = 'bi bi-pause-circle text-muted';
+        btn.classList.add('opacity-75');
+    }
+    updateCountdownUI();
+}
+
+async function switchNewsCategory(category) {
+    activeNewsCategory = category;
+    activeSentimentFilter = null;
+    newsSearchQuery = '';
+    newsOffset = 0;
+    hasMoreNews = true;
+    isFetchingMoreNews = false;
+
+    const searchInput = document.getElementById('newsSearchInput');
+    if (searchInput) searchInput.value = '';
+    const searchClear = document.getElementById('newsSearchClear');
+    if (searchClear) searchClear.style.display = 'none';
+
+    // Update active category tab button
+    document.querySelectorAll('#newsCategoryPills .news-cat-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === category) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Reset sentiment filter buttons
+    document.querySelectorAll('#newsCategoryPills [data-sentiment]').forEach(b => b.classList.remove('active'));
+
+    // Show loading skeleton
+    const container = document.getElementById('newsArticlesContainer');
+    if (container) {
+        container.innerHTML = `
+            <div class="p-5 text-center">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 2.5rem; height: 2.5rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h6 class="fw-bold mb-1">Retrieving Live Financial Stream...</h6>
+                <p class="text-muted small mb-0">Aggregating real-time market wires, filings, and sentiment indicators</p>
+            </div>
+        `;
+    }
+
+    try {
+        const res = await fetch(`/api/market-news?category=${encodeURIComponent(category)}&offset=0&limit=16`);
+        const data = await res.json();
+
+        activeNewsArticles = data.articles || [];
+        newsOffset = activeNewsArticles.length;
+        updateSentimentBarUI(data.sentiment_summary, data.total_articles);
+        renderNewsArticles(activeNewsArticles);
+
+        const updatedBadge = document.getElementById('newsLastUpdated');
+        if (updatedBadge) {
+            updatedBadge.innerText = `Updated ${data.last_updated || 'just now'}`;
+        }
+        setupInfiniteScroll();
+    } catch (err) {
+        console.error('[LiveNews] Failed to load news:', err);
+        if (container) {
+            container.innerHTML = `
+                <div class="news-empty-state">
+                    <i class="bi bi-exclamation-triangle text-warning fs-2 mb-2"></i>
+                    <h6 class="fw-bold mb-1">Temporary Stream Latency</h6>
+                    <p class="text-muted small mb-3">Could not sync real-time news desk at this moment. Please retry.</p>
+                    <button class="btn-pill-action justify-content-center" onclick="refreshLiveNews()">
+                        <i class="bi bi-arrow-clockwise"></i> Retry Connection
+                    </button>
+                </div>
+            `;
+        }
+    }
+}
+
+function filterBySentiment(sentiment) {
+    const btn = document.querySelector(`[data-sentiment="${sentiment}"]`);
+    if (activeSentimentFilter === sentiment) {
+        // Toggle off
+        activeSentimentFilter = null;
+        if (btn) btn.classList.remove('active');
+    } else {
+        activeSentimentFilter = sentiment;
+        document.querySelectorAll('#newsCategoryPills [data-sentiment]').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
+    applyActiveFilters();
+}
+
+function handleNewsSearch(val) {
+    newsSearchQuery = (val || '').trim().toLowerCase();
+    const clearBtn = document.getElementById('newsSearchClear');
+    if (clearBtn) {
+        clearBtn.style.display = newsSearchQuery.length > 0 ? 'block' : 'none';
+    }
+    applyActiveFilters();
+}
+
+function clearNewsSearch() {
+    newsSearchQuery = '';
+    const input = document.getElementById('newsSearchInput');
+    if (input) input.value = '';
+    const clearBtn = document.getElementById('newsSearchClear');
+    if (clearBtn) clearBtn.style.display = 'none';
+    applyActiveFilters();
+}
+
+function applyActiveFilters() {
+    let filtered = [...activeNewsArticles];
+
+    // Filter by sentiment
+    if (activeSentimentFilter) {
+        filtered = filtered.filter(a => a.sentiment && a.sentiment.label === activeSentimentFilter);
+    }
+
+    // Filter by search query
+    if (newsSearchQuery) {
+        filtered = filtered.filter(a => {
+            const title = (a.title || '').toLowerCase();
+            const summary = (a.summary || '').toLowerCase();
+            const publisher = (a.publisher || '').toLowerCase();
+            const cat = (a.category || '').toLowerCase();
+            const sym = (a.symbol || '').toLowerCase();
+            return title.includes(newsSearchQuery) ||
+                   summary.includes(newsSearchQuery) ||
+                   publisher.includes(newsSearchQuery) ||
+                   cat.includes(newsSearchQuery) ||
+                   sym.includes(newsSearchQuery);
+        });
+    }
+
+    // Update count badge
+    const badge = document.getElementById('newsArticleCountBadge');
+    if (badge) {
+        badge.innerText = `${filtered.length} Stories Indexed`;
+    }
+
+    renderNewsArticles(filtered);
+}
+
+async function refreshLiveNews(isSilent = false) {
+    const refreshIcon = document.getElementById('newsRefreshIcon');
+    if (refreshIcon && !isSilent) {
+        refreshIcon.classList.add('spinning-icon');
+    }
+
+    try {
+        const res = await fetch(`/api/market-news?category=${encodeURIComponent(activeNewsCategory)}&offset=0&limit=16&refresh=true`);
+        const data = await res.json();
+
+        activeNewsArticles = data.articles || [];
+        newsOffset = activeNewsArticles.length;
+        updateSentimentBarUI(data.sentiment_summary, data.total_articles);
+        applyActiveFilters();
+
+        const updatedBadge = document.getElementById('newsLastUpdated');
+        if (updatedBadge) {
+            updatedBadge.innerText = `Updated ${data.last_updated || 'just now'}`;
+        }
+        autoRefreshCountdown = 60;
+        updateCountdownUI();
+        setupInfiniteScroll();
+    } catch (err) {
+        console.error('[LiveNews] Refresh failed:', err);
+    } finally {
+        if (refreshIcon) {
+            setTimeout(() => refreshIcon.classList.remove('spinning-icon'), 600);
+        }
+    }
+}
+
+function updateSentimentBarUI(summary, totalCount) {
+    if (!summary) return;
+
+    const moodBadge = document.getElementById('newsMoodBadge');
+    const moodIcon = document.getElementById('newsMoodIcon');
+    const moodText = document.getElementById('newsMoodText');
+
+    if (moodBadge && summary.badge_class) {
+        moodBadge.className = `${summary.badge_class} px-2 py-1`;
+    }
+    if (moodIcon && summary.icon) {
+        moodIcon.className = `bi ${summary.icon} me-1`;
+    }
+    if (moodText && summary.label) {
+        moodText.innerText = summary.label;
+    }
+
+    const bullCount = document.getElementById('newsBullishCount');
+    const bullPct = document.getElementById('newsBullishPct');
+    const neuCount = document.getElementById('newsNeutralCount');
+    const neuPct = document.getElementById('newsNeutralPct');
+    const bearCount = document.getElementById('newsBearishCount');
+    const bearPct = document.getElementById('newsBearishPct');
+
+    if (bullCount) bullCount.innerText = summary.bullish_count || 0;
+    if (bullPct) bullPct.innerText = `${summary.bullish_pct || 0}%`;
+    if (neuCount) neuCount.innerText = summary.neutral_count || 0;
+    if (neuPct) neuPct.innerText = `${summary.neutral_pct || 0}%`;
+    if (bearCount) bearCount.innerText = summary.bearish_count || 0;
+    if (bearPct) bearPct.innerText = `${summary.bearish_pct || 0}%`;
+
+    const barBull = document.getElementById('sentimentBarBullish');
+    const barNeu = document.getElementById('sentimentBarNeutral');
+    const barBear = document.getElementById('sentimentBarBearish');
+
+    if (barBull) barBull.style.width = `${summary.bullish_pct || 33.3}%`;
+    if (barNeu) barNeu.style.width = `${summary.neutral_pct || 33.3}%`;
+    if (barBear) barBear.style.width = `${summary.bearish_pct || 33.3}%`;
+}
+
+function renderNewsArticles(articles) {
+    const container = document.getElementById('newsArticlesContainer');
+    if (!container) return;
+
+    if (!articles || articles.length === 0) {
+        container.innerHTML = `
+            <div class="news-empty-state">
+                <i class="bi bi-search text-muted fs-2 mb-2"></i>
+                <h6 class="fw-bold mb-1">No Matching Headlines Located</h6>
+                <p class="text-muted small mb-3">No live articles match your current search or filter criteria.</p>
+                <button class="btn-pill-action justify-content-center" onclick="clearNewsSearch(); switchNewsCategory('all');">
+                    <i class="bi bi-arrow-repeat"></i> Reset All Filters
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    const spotlight = articles[0];
+    const trending = articles.slice(1, 4);
+    const secondary = articles.slice(4);
+
+    let html = '';
+
+    // Top Stories Showcase Row
+    html += `
+        <div class="row g-4 mb-4">
+            <!-- Lead Spotlight Story (Col 8) -->
+            <div class="col-lg-8">
+                <div class="news-spotlight-card h-100 d-flex flex-column justify-content-between" id="leadSpotlightCard">
+                    <div class="news-spotlight-img-wrap" style="min-height: 280px; max-height: 340px;">
+                        ${spotlight.thumbnail ? `
+                            <img src="${escapeAttr(spotlight.thumbnail)}" alt="${escapeAttr(spotlight.title)}" class="news-spotlight-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'news-fallback-placeholder\\'><i class=\\'bi bi-newspaper\\'></i></div>';">
+                        ` : `
+                            <div class="news-fallback-placeholder">
+                                <i class="bi bi-newspaper"></i>
+                            </div>
+                        `}
+                        <div class="news-spotlight-badge-float d-flex gap-2">
+                            <span class="badge bg-dark bg-opacity-75 text-light px-2 py-1 backdrop-blur small">
+                                <i class="bi bi-star-fill text-warning me-1"></i> TOP STORY
+                            </span>
+                            <span class="${spotlight.sentiment ? spotlight.sentiment.badge_class : 'badge-neutral-subtle'} px-2 py-1">
+                                <i class="bi ${spotlight.sentiment ? spotlight.sentiment.icon : 'bi-dash-lg'} me-1"></i>${spotlight.sentiment ? spotlight.sentiment.label : 'NEUTRAL'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="news-publisher-tag">${escapeHtml(spotlight.publisher || 'Financial Wire')} • ${escapeHtml(spotlight.time_ago || 'Recent')}</span>
+                                <span class="badge bg-secondary bg-opacity-25 text-secondary small">${escapeHtml(spotlight.category || 'Markets')}</span>
+                            </div>
+                            <h3 class="fw-bold mb-2 fs-5">
+                                <a href="${escapeAttr(spotlight.url)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                                    ${escapeHtml(spotlight.title)}
+                                </a>
+                            </h3>
+                            <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                                ${escapeHtml(spotlight.summary || 'Institutional market report on financial developments, macroeconomic trends, and equity earnings catalysts.')}
+                            </p>
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3 border-top">
+                            <div class="d-flex align-items-center gap-2">
+                                ${spotlight.symbol && spotlight.symbol !== 'GSPC' && spotlight.symbol !== 'IXIC' ? `
+                                    <a href="/stock/${encodeURIComponent(spotlight.symbol)}" class="news-ticker-link" title="Open ${escapeAttr(spotlight.symbol)} Technicals & Forecast">
+                                        <i class="bi bi-graph-up text-primary me-1"></i> ${escapeHtml(spotlight.symbol)}
+                                    </a>
+                                ` : ''}
+                                <span class="text-muted small"><i class="bi bi-shield-check text-success me-1"></i> Verified Wire</span>
+                            </div>
+                            <a href="${escapeAttr(spotlight.url)}" target="_blank" rel="noopener noreferrer" class="news-read-link">
+                                Read Full Story <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending Highlights Column (Col 4) -->
+            <div class="col-lg-4">
+                <div class="d-flex flex-column gap-3 h-100 justify-content-between">
+                    <div class="d-flex align-items-center gap-2 px-1">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i>
+                        <h6 class="fw-bold mb-0 text-uppercase small text-muted" style="letter-spacing: 0.05em;">Market Catalysts</h6>
+                    </div>
+
+                    ${trending.map(tr => `
+                        <div class="terminal-card p-3 d-flex flex-column justify-content-between flex-grow-1">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="news-publisher-tag text-truncate" style="max-width: 140px;">${escapeHtml(tr.publisher || 'Financial Wire')}</span>
+                                    <span class="${tr.sentiment ? tr.sentiment.badge_class : 'badge-neutral-subtle'}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">
+                                        ${tr.sentiment ? tr.sentiment.label : 'NEUTRAL'}
+                                    </span>
+                                </div>
+                                <h6 class="fw-bold mb-1" style="font-size: 0.88rem; line-height: 1.4;">
+                                    <a href="${escapeAttr(tr.url)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                                        ${escapeHtml(tr.title)}
+                                    </a>
+                                </h6>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top" style="font-size: 0.75rem;">
+                                <span class="text-muted small">${escapeHtml(tr.time_ago || 'Recent')}</span>
+                                <a href="${escapeAttr(tr.url)}" target="_blank" rel="noopener noreferrer" class="news-read-link" style="font-size: 0.75rem;">
+                                    Read <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Secondary Stories Grid (Col 4 / Col 6)
+    if (secondary.length > 0) {
+        html += `<div class="row g-3" id="secondaryNewsGrid">`;
+        secondary.forEach(item => {
+            html += `
+                <div class="col-lg-4 col-md-6 news-card-col" data-title="${escapeAttr((item.title || '').toLowerCase())}" data-publisher="${escapeAttr((item.publisher || '').toLowerCase())}" data-sentiment="${escapeAttr(item.sentiment ? item.sentiment.label : '')}">
+                    ${createNewsCardHtml(item)}
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function createNewsCardHtml(item) {
+    const badgeClass = item.sentiment ? item.sentiment.badge_class : 'badge-neutral-subtle';
+    const sentimentIcon = item.sentiment ? item.sentiment.icon : 'bi-dash-lg';
+    const sentimentLabel = item.sentiment ? item.sentiment.label : 'NEUTRAL';
+    const publisher = escapeHtml(item.publisher || 'Financial Wire');
+    const timeAgo = escapeHtml(item.time_ago || 'Recent');
+    const title = escapeHtml(item.title || 'Market Update');
+    const summary = item.summary ? `<p class="news-card-summary">${escapeHtml(item.summary)}</p>` : '';
+    const url = escapeAttr(item.url || '#');
+    const symbol = item.symbol && item.symbol !== 'GSPC' && item.symbol !== 'IXIC'
+        ? `<a href="/stock/${encodeURIComponent(item.symbol)}" class="news-ticker-link" title="Open ${escapeAttr(item.symbol)} Analysis">${escapeHtml(item.symbol)}</a>`
+        : `<span class="badge bg-secondary bg-opacity-15 text-secondary" style="font-size: 0.68rem;">${escapeHtml(item.category || 'News')}</span>`;
+
+    const imgMarkup = item.thumbnail ? `
+        <img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)}" class="news-card-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'news-fallback-placeholder\\'><i class=\\'bi bi-newspaper\\'></i></div>';">
+    ` : `
+        <div class="news-fallback-placeholder">
+            <i class="bi bi-newspaper"></i>
+        </div>
+    `;
+
+    return `
+        <div class="news-grid-card">
+            <div class="news-card-img-wrap">
+                ${imgMarkup}
+                <div class="position-absolute top-0 end-0 m-2">
+                    <span class="${badgeClass}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        <i class="bi ${sentimentIcon} me-1"></i>${sentimentLabel}
+                    </span>
+                </div>
+            </div>
+            <div class="p-3 d-flex flex-column justify-content-between flex-grow-1">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="news-publisher-tag text-truncate" style="max-width: 160px;">${publisher}</span>
+                        <span class="text-muted small" style="font-size: 0.72rem;">${timeAgo}</span>
+                    </div>
+                    <h6 class="news-card-title" title="${escapeAttr(item.title)}">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-reset">
+                            ${title}
+                        </a>
+                    </h6>
+                    ${summary}
+                </div>
+                <div class="news-card-footer mt-auto">
+                    <div class="d-flex align-items-center gap-1">
+                        ${symbol}
+                    </div>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="news-read-link">
+                        Read <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createNewsCardElement(item) {
+    const col = document.createElement('div');
+    col.className = 'col-lg-4 col-md-6 news-card-col news-fade-in';
+    col.setAttribute('data-title', (item.title || '').toLowerCase());
+    col.setAttribute('data-publisher', (item.publisher || '').toLowerCase());
+    col.setAttribute('data-sentiment', item.sentiment ? item.sentiment.label : '');
+    col.innerHTML = createNewsCardHtml(item);
+    return col;
+}
+
+async function fetchMoreNewsStream() {
+    if (isFetchingMoreNews || !hasMoreNews) return;
+    isFetchingMoreNews = true;
+
+    const loader = document.getElementById('infiniteScrollLoader');
+    if (loader) loader.style.display = 'block';
+
+    try {
+        const url = `/api/market-news?category=${encodeURIComponent(activeNewsCategory)}&offset=${newsOffset}&limit=12`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const incoming = data.articles || [];
+        if (incoming.length > 0) {
+            let secondaryGrid = document.getElementById('secondaryNewsGrid');
+            if (!secondaryGrid) {
+                const container = document.getElementById('newsArticlesContainer');
+                if (container) {
+                    secondaryGrid = document.createElement('div');
+                    secondaryGrid.className = 'row g-3';
+                    secondaryGrid.id = 'secondaryNewsGrid';
+                    container.appendChild(secondaryGrid);
+                }
+            }
+
+            const existingUrls = new Set(activeNewsArticles.map(a => a.url).filter(Boolean));
+            const existingTitles = new Set(activeNewsArticles.map(a => (a.title || '').trim().toLowerCase()).filter(Boolean));
+
+            incoming.forEach(item => {
+                const normTitle = (item.title || '').trim().toLowerCase();
+                if (item.url && existingUrls.has(item.url)) return;
+                if (normTitle && existingTitles.has(normTitle)) return;
+
+                if (item.url) existingUrls.add(item.url);
+                if (normTitle) existingTitles.add(normTitle);
+                activeNewsArticles.push(item);
+
+                if (secondaryGrid) {
+                    const cardCol = createNewsCardElement(item);
+                    if (activeSentimentFilter && item.sentiment && item.sentiment.label !== activeSentimentFilter) {
+                        cardCol.style.display = 'none';
+                    }
+                    if (newsSearchQuery) {
+                        const match = (item.title || '').toLowerCase().includes(newsSearchQuery) ||
+                                      (item.publisher || '').toLowerCase().includes(newsSearchQuery) ||
+                                      (item.symbol || '').toLowerCase().includes(newsSearchQuery);
+                        if (!match) cardCol.style.display = 'none';
+                    }
+                    secondaryGrid.appendChild(cardCol);
+                }
+            });
+
+            newsOffset += incoming.length;
+
+            const badge = document.getElementById('newsArticleCountBadge');
+            if (badge) {
+                badge.innerText = `${activeNewsArticles.length} Stories Indexed`;
+            }
+        }
+    } catch (err) {
+        console.warn('[InfiniteScroll] Error streaming more market stories:', err);
+    } finally {
+        if (loader) loader.style.display = 'none';
+        isFetchingMoreNews = false;
+    }
+}
+
+function throttleScrollListener() {
+    if (scrollThrottleTimeout) return;
+    scrollThrottleTimeout = setTimeout(() => {
+        scrollThrottleTimeout = null;
+        const scrollPosition = window.innerHeight + window.scrollY;
+        const documentHeight = document.documentElement.offsetHeight;
+        if (documentHeight - scrollPosition < 800 && !isFetchingMoreNews && hasMoreNews) {
+            fetchMoreNewsStream();
+        }
+    }, 200);
+}
+
+function setupInfiniteScroll() {
+    const sentinel = document.getElementById('infiniteScrollSentinel');
+    if (!sentinel) return;
+
+    if (infiniteScrollObserver) {
+        infiniteScrollObserver.disconnect();
+    }
+
+    if ('IntersectionObserver' in window) {
+        infiniteScrollObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !isFetchingMoreNews && hasMoreNews) {
+                    fetchMoreNewsStream();
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '500px',
+            threshold: 0.01
+        });
+        infiniteScrollObserver.observe(sentinel);
+    }
+
+    window.removeEventListener('scroll', throttleScrollListener);
+    window.addEventListener('scroll', throttleScrollListener, { passive: true });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(text) {
+    if (!text) return '';
+    return String(text).replace(/"/g, '&quot;');
+}
+
+// Export functions to window
+window.switchNewsCategory = switchNewsCategory;
+window.filterBySentiment = filterBySentiment;
+window.handleNewsSearch = handleNewsSearch;
+window.clearNewsSearch = clearNewsSearch;
+window.refreshLiveNews = refreshLiveNews;
+window.toggleAutoRefresh = toggleAutoRefresh;
+window.fetchMoreNewsStream = fetchMoreNewsStream;
+window.setupInfiniteScroll = setupInfiniteScroll;
+
